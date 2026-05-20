@@ -1,0 +1,73 @@
+[
+  {
+    "id": "week-2",
+    "date": "2026-05-20",
+    "version": "Week 2",
+    "title": "Baseline Model & Data Pipeline",
+    "tags": ["Progress", "Research"],
+    "excerpt": "Implemented the baseline model and built the data ingestion pipeline. First experiments are running.",
+    "sections": [
+      {
+        "heading": "Overview",
+        "body": "Week 2 focused on moving from theory to code. The baseline model is now running end-to-end, and the data pipeline can handle the full dataset without errors."
+      },
+      {
+        "heading": "Completed",
+        "items": [
+          "Implemented baseline model architecture based on the Week 1 literature review",
+          "Built and validated the data ingestion and preprocessing pipeline",
+          "Ran first set of training experiments — loss curves look stable",
+          "Set up experiment tracking with output logging"
+        ]
+      },
+      {
+        "heading": "Observations",
+        "body": "The baseline is performing roughly in line with the numbers reported in prior work, which is a good sign the pipeline is correct. Main bottleneck right now is preprocessing speed — may parallelize that next week."
+      },
+      {
+        "heading": "Next Steps",
+        "items": [
+          "Profile and optimize the data pipeline",
+          "Run ablation experiments on the baseline",
+          "Begin drafting the methods section"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "week-1",
+    "date": "2026-05-06",
+    "version": "Week 1",
+    "title": "Project Kickoff & Literature Review",
+    "tags": ["Setup", "Research"],
+    "excerpt": "Established the project framework, set up the development environment, and completed the initial literature review.",
+    "sections": [
+      {
+        "heading": "Overview",
+        "body": "Week 1 marked the start of Summer Project 2026. The focus was on setting a solid foundation — getting the environment in shape and surveying the existing literature before writing any code."
+      },
+      {
+        "heading": "Completed",
+        "items": [
+          "Set up project repository, environment, and tooling",
+          "Reviewed 8 papers covering the core problem space",
+          "Identified the 3 most relevant prior works to build on",
+          "Drafted the initial project proposal and research questions",
+          "Discussed scope with advisor and confirmed direction"
+        ]
+      },
+      {
+        "heading": "Key Takeaways from Literature",
+        "body": "The most recent approaches share a common weakness: they don't generalize well across domains. This gap is what this project aims to address. The baseline I'll implement comes from the current state of the art on the benchmark I'll use."
+      },
+      {
+        "heading": "Next Steps",
+        "items": [
+          "Implement the baseline model",
+          "Source and preprocess the dataset",
+          "Set up the training and evaluation loop"
+        ]
+      }
+    ]
+  }
+]

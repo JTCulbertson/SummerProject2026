@@ -1,0 +1,28 @@
+.claude
+.venv
+keys.txt
+
+# LaTeX aux files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.blg
+*.bbl
+*.bcf
+*.run.xml
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
