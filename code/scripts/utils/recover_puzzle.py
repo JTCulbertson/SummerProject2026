@@ -41,8 +41,7 @@ Respond with ONLY a JSON object in this exact format — no markdown, no explana
   "metaphor": "<title string, or empty string if none>",
   "train": [{"input": [[...], ...], "output": [[...], ...]}, ...],
   "test":  [{"input": [[...], ...]}]
-}
-"""
+}"""
 
 # ---------------------------------------------------------------------------
 # Network helpers
