@@ -1,15 +1,14 @@
 """
-scripts/make_report.py — HTML Report Generator for MARC Reconstruction Results
-===============================================================================
+scripts/make_report.py — Visual HTML Report for MARC Reconstruction Results
+============================================================================
 Reads code/data/reconstruction/results.json and produces a self-contained
-HTML report (no external CDN dependencies) at
-code/data/reconstruction/report.html.
+HTML report at code/data/reconstruction/report.html.
 
-The report shows, for each puzzle:
-  - Puzzle name and metaphor
-  - Parse success/fail badge
-  - Side-by-side: model output JSON vs correct puzzle JSON
-  - Collapsible reasoning trace box
+For each puzzle it renders:
+  - Colored ARC grids (model vs correct) for every train/test pair
+  - Cell-level diff highlighting (red outline = model got it wrong)
+  - Per-puzzle accuracy stats
+  - Collapsible reasoning trace
 
 Usage:
     uv run code/scripts/make_report.py
@@ -25,407 +24,386 @@ REPO_ROOT   = Path(__file__).resolve().parents[1]
 INPUT_FILE  = REPO_ROOT / "data" / "reconstruction" / "results.json"
 OUTPUT_FILE = REPO_ROOT / "data" / "reconstruction" / "report.html"
 
-# ---------------------------------------------------------------------------
-# HTML helpers
-# ---------------------------------------------------------------------------
+ARC_COLORS = [
+    "#000000",  # 0 black
+    "#0074D9",  # 1 blue
+    "#FF4136",  # 2 red
+    "#2ECC40",  # 3 green
+    "#FFDC00",  # 4 yellow
+    "#AAAAAA",  # 5 gray
+    "#F012BE",  # 6 magenta
+    "#FF851B",  # 7 orange
+    "#ADD8E6",  # 8 light blue
+    "#870C25",  # 9 maroon
+]
 
-def _e(s: str) -> str:
-    return html.escape(str(s) if s is not None else "")
-
-
-def _badge(success: bool) -> str:
-    cls = "badge-pass" if success else "badge-fail"
-    label = "PASS" if success else "FAIL"
-    return f'<span class="{cls}">{label}</span>'
-
-
-def _json_pre(obj, empty_msg: str = "(none)") -> str:
-    if obj is None:
-        return f'<pre class="json-block empty">{_e(empty_msg)}</pre>'
-    return f'<pre class="json-block">{_e(json.dumps(obj, indent=2))}</pre>'
+CELL_PX = 22   # pixel size of each grid cell
 
 
 # ---------------------------------------------------------------------------
-# Section builders
+# Grid helpers
 # ---------------------------------------------------------------------------
 
-def _summary_header(data: dict) -> str:
-    model     = _e(data.get("model", "unknown"))
-    api_url   = _e(data.get("api_url", ""))
-    timestamp = _e(data.get("timestamp", ""))
-    diag      = data.get("diagnostic_passed", False)
-    summary   = data.get("summary", {})
-    total     = summary.get("total", len(data.get("puzzles", [])))
-    passed    = summary.get("parse_success", sum(
-        1 for p in data.get("puzzles", []) if p.get("parse_success")
-    ))
-    pct       = f"{100 * passed / total:.1f}" if total else "0.0"
-    diag_html = _badge(diag)
-
-    return f"""
-<header class="report-header">
-  <h1>MARC Reconstruction Report</h1>
-  <div class="meta-grid">
-    <div class="meta-item"><span class="meta-label">Model</span><span class="meta-value">{model}</span></div>
-    <div class="meta-item"><span class="meta-label">API</span><span class="meta-value">{api_url}</span></div>
-    <div class="meta-item"><span class="meta-label">Timestamp</span><span class="meta-value">{timestamp}</span></div>
-    <div class="meta-item"><span class="meta-label">Diagnostic</span><span class="meta-value">{diag_html}</span></div>
-  </div>
-  <div class="stat-row">
-    <div class="stat-box">
-      <div class="stat-number">{total}</div>
-      <div class="stat-label">Total Puzzles</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-number">{passed}</div>
-      <div class="stat-label">Parsed OK</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-number">{total - passed}</div>
-      <div class="stat-label">Parse Failed</div>
-    </div>
-    <div class="stat-box highlight">
-      <div class="stat-number">{pct}%</div>
-      <div class="stat-label">Success Rate</div>
-    </div>
-  </div>
-</header>
-"""
+def _to_int(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return 0
 
 
-def _puzzle_section(puzzle: dict, idx: int) -> str:
+def _grid_to_int(grid):
+    if not grid or not isinstance(grid, list):
+        return []
+    return [[_to_int(c) for c in row] for row in grid if isinstance(row, list)]
+
+
+def _diff_mask(model_grid, correct_grid):
+    """Return a 2D bool array: True where values differ."""
+    rows = len(correct_grid)
+    mask = []
+    for r in range(rows):
+        cr = correct_grid[r]
+        mr = model_grid[r] if r < len(model_grid) else []
+        row_mask = []
+        for c, cv in enumerate(cr):
+            mv = mr[c] if c < len(mr) else -1
+            row_mask.append(mv != cv)
+        mask.append(row_mask)
+    return mask
+
+
+def _render_grid_html(grid, diff_mask=None, label=""):
+    """Render a 2D integer grid as an HTML table of colored cells."""
+    if not grid:
+        return f'<div class="grid-wrap"><div class="grid-empty">(empty)</div></div>'
+
+    rows = len(grid)
+    cols = max(len(r) for r in grid) if grid else 0
+    total = rows * cols
+    errors = sum(
+        1 for r in range(rows) for c in range(len(grid[r]))
+        if diff_mask and r < len(diff_mask) and c < len(diff_mask[r]) and diff_mask[r][c]
+    ) if diff_mask else 0
+
+    label_html = ""
+    if label:
+        acc_html = ""
+        if diff_mask is not None:
+            pct = 100 * (total - errors) / total if total else 0
+            color = "#22c55e" if errors == 0 else ("#f59e0b" if pct >= 70 else "#ef4444")
+            acc_html = f' <span style="color:{color};font-size:0.7rem;font-weight:600">{"✓" if errors==0 else f"{errors} err"}</span>'
+        label_html = f'<div class="grid-label">{html.escape(label)}{acc_html}</div>'
+
+    cells = []
+    for r, row in enumerate(grid):
+        cells.append('<tr>')
+        for c, val in enumerate(row):
+            color_idx = max(0, min(9, val))
+            bg = ARC_COLORS[color_idx]
+            # Determine text color for contrast
+            txt = "#fff" if color_idx in (0, 1, 2, 6, 9) else "#000"
+            wrong = diff_mask and r < len(diff_mask) and c < len(diff_mask[r]) and diff_mask[r][c]
+            border = "2px solid #ef4444" if wrong else f"1px solid rgba(255,255,255,0.08)"
+            cells.append(
+                f'<td style="width:{CELL_PX}px;height:{CELL_PX}px;'
+                f'background:{bg};border:{border};'
+                f'font-size:9px;text-align:center;color:{txt};'
+                f'font-weight:600;line-height:{CELL_PX}px;">'
+                f'{val}</td>'
+            )
+        cells.append('</tr>')
+
+    table = (
+        f'<table style="border-collapse:collapse;border:1px solid #30363d;">'
+        + "".join(cells)
+        + "</table>"
+    )
+    return f'<div class="grid-wrap">{label_html}{table}</div>'
+
+
+def _pair_section(pair_label, model_pair, correct_pair):
+    """Render one input→output pair comparing model vs correct."""
+    mo_input  = _grid_to_int(model_pair.get("input")   if model_pair else None)
+    mo_output = _grid_to_int(model_pair.get("output")  if model_pair else None)
+    co_input  = _grid_to_int(correct_pair.get("input")  if correct_pair else None)
+    co_output = _grid_to_int(correct_pair.get("output") if correct_pair else None)
+
+    diff_in  = _diff_mask(mo_input,  co_input)  if mo_input  and co_input  else None
+    diff_out = _diff_mask(mo_output, co_output) if mo_output and co_output else None
+
+    # Count errors across both grids
+    in_errors  = sum(sum(r) for r in diff_in)  if diff_in  else 0
+    out_errors = sum(sum(r) for r in diff_out) if diff_out else 0
+    total_err  = in_errors + out_errors
+
+    badge_color = "#22c55e" if total_err == 0 else ("#f59e0b" if total_err <= 5 else "#ef4444")
+    badge = f'<span style="background:{badge_color};color:#fff;font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:4px;vertical-align:middle">' \
+            + ("PERFECT" if total_err == 0 else f"{total_err} errors") + "</span>"
+
+    model_row = (
+        f'<div class="pair-row">'
+        f'<div class="pair-who">Model</div>'
+        + _render_grid_html(mo_input,  diff_in,  "Input")
+        + '<div class="arrow">→</div>'
+        + (_render_grid_html(mo_output, diff_out, "Output") if mo_output else '<div class="grid-wrap"><div class="grid-empty">(hidden)</div></div>')
+        + '</div>'
+    )
+    correct_row = (
+        f'<div class="pair-row">'
+        f'<div class="pair-who">Correct</div>'
+        + _render_grid_html(co_input,  None, "Input")
+        + '<div class="arrow">→</div>'
+        + _render_grid_html(co_output, None, "Output")
+        + '</div>'
+    )
+
+    return (
+        f'<div class="pair-block">'
+        f'<div class="pair-heading">{html.escape(pair_label)} {badge}</div>'
+        + model_row + correct_row
+        + '</div>'
+    )
+
+
+# ---------------------------------------------------------------------------
+# Puzzle card
+# ---------------------------------------------------------------------------
+
+def _puzzle_accuracy(puzzle):
+    mo = puzzle.get("model_output") or {}
+    co = puzzle.get("correct_output") or {}
+    errors = cells = 0
+    for split in ("train", "test"):
+        for i, co_pair in enumerate(co.get(split) or []):
+            if not isinstance(co_pair, dict):
+                continue
+            mo_pairs = mo.get(split) or []
+            mo_pair = mo_pairs[i] if i < len(mo_pairs) and isinstance(mo_pairs[i], dict) else {}
+            for key in ("input", "output"):
+                cg = _grid_to_int(co_pair.get(key))
+                mg = _grid_to_int(mo_pair.get(key))
+                for r, row in enumerate(cg):
+                    for c, cv in enumerate(row):
+                        cells += 1
+                        mv = mg[r][c] if r < len(mg) and c < len(mg[r]) else -1
+                        if mv != cv:
+                            errors += 1
+    return errors, cells
+
+
+def _puzzle_section(puzzle, idx):
     name     = puzzle.get("name", f"puzzle_{idx}")
     readable = name.replace("_", " ").title()
-    metaphor = _e(puzzle.get("metaphor") or "")
-    success  = puzzle.get("parse_success", False)
-    error    = puzzle.get("error")
+    metaphor = puzzle.get("metaphor") or ""
+    mo = puzzle.get("model_output") or {}
+    co = puzzle.get("correct_output") or {}
+    reasoning = puzzle.get("reasoning_trace") or ""
+    parse_ok  = puzzle.get("parse_success", False)
 
-    model_out  = puzzle.get("model_output")
-    correct    = puzzle.get("correct_output")
-    reasoning  = puzzle.get("reasoning_trace") or ""
-    raw_resp   = puzzle.get("raw_response") or ""
-
-    error_html = ""
-    if error:
-        error_html = f'<div class="error-box"><strong>Error:</strong> {_e(error)}</div>'
-
-    reasoning_content = (
-        f'<pre class="json-block reasoning-pre">{_e(reasoning)}</pre>'
-        if reasoning.strip()
-        else '<p class="empty-note">(no reasoning trace — model did not emit a thinking field)</p>'
+    errors, cells = _puzzle_accuracy(puzzle)
+    pct = 100 * (cells - errors) / cells if cells else 0
+    acc_color = "#22c55e" if errors == 0 else ("#f59e0b" if pct >= 70 else "#ef4444")
+    parse_badge = (
+        f'<span style="background:#22c55e;color:#fff;font-size:0.7rem;font-weight:700;'
+        f'padding:2px 8px;border-radius:4px">PARSED</span>'
+        if parse_ok else
+        f'<span style="background:#ef4444;color:#fff;font-size:0.7rem;font-weight:700;'
+        f'padding:2px 8px;border-radius:4px">PARSE FAIL</span>'
+    )
+    acc_badge = (
+        f'<span style="background:{acc_color};color:#fff;font-size:0.7rem;font-weight:700;'
+        f'padding:2px 8px;border-radius:4px">{pct:.0f}% ({cells-errors}/{cells})</span>'
     )
 
-    raw_content = (
-        f'<pre class="json-block raw-pre">{_e(raw_resp)}</pre>'
-        if raw_resp.strip()
-        else '<p class="empty-note">(no raw response)</p>'
-    )
+    pairs_html = []
+
+    for split_label, split_key in (("Train", "train"), ("Test", "test")):
+        co_pairs = co.get(split_key) or []
+        mo_pairs = mo.get(split_key) or []
+        for i, co_pair in enumerate(co_pairs):
+            if not isinstance(co_pair, dict):
+                continue
+            mo_pair = mo_pairs[i] if i < len(mo_pairs) and isinstance(mo_pairs[i], dict) else {}
+            pairs_html.append(_pair_section(f"{split_label} {i+1}", mo_pair, co_pair))
+
+    reasoning_block = ""
+    if reasoning.strip():
+        reasoning_block = (
+            f'<details class="reasoning-block">'
+            f'<summary>Reasoning Trace</summary>'
+            f'<pre class="reasoning-pre">{html.escape(reasoning)}</pre>'
+            f'</details>'
+        )
 
     return f"""
 <section class="puzzle-card" id="puzzle-{idx}">
   <div class="card-header">
-    <h2>{_e(readable)} {_badge(success)}</h2>
-    {f'<p class="metaphor">"{metaphor}"</p>' if metaphor else ""}
+    <h2>{html.escape(readable)} {parse_badge} {acc_badge}</h2>
+    {"" if not metaphor else f'<p class="metaphor">&#8220;{html.escape(metaphor)}&#8221;</p>'}
   </div>
-  {error_html}
-  <div class="comparison-grid">
-    <div class="col">
-      <h3 class="col-heading">Model Output</h3>
-      {_json_pre(model_out, "(parse failed — see raw response below)")}
-    </div>
-    <div class="col">
-      <h3 class="col-heading">Correct Puzzle</h3>
-      {_json_pre(correct, "(no ground-truth JSON found)")}
-    </div>
-  </div>
-
-  <details class="reasoning-block">
-    <summary>&#x1F9E0; Reasoning Trace</summary>
-    {reasoning_content}
-  </details>
-
-  <details class="raw-block">
-    <summary>&#x1F4C4; Raw Model Response</summary>
-    {raw_content}
-  </details>
+  {"".join(pairs_html)}
+  {reasoning_block}
 </section>
 """
 
 
 # ---------------------------------------------------------------------------
-# Inline CSS
+# Summary header
 # ---------------------------------------------------------------------------
 
-CSS = """
-* { box-sizing: border-box; margin: 0; padding: 0; }
+def _summary_header(data):
+    model     = html.escape(data.get("model", "unknown"))
+    timestamp = html.escape(data.get("timestamp", ""))
+    puzzles   = data.get("puzzles", [])
+    total     = len(puzzles)
+    parsed    = sum(1 for p in puzzles if p.get("parse_success"))
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f0f2f5;
-  color: #1e293b;
-  padding: 24px 16px;
-  line-height: 1.5;
-}
+    # Compute aggregate cell accuracy
+    total_cells = total_errors = 0
+    for p in puzzles:
+        e, c = _puzzle_accuracy(p)
+        total_errors += e
+        total_cells  += c
+    cell_acc = f"{100*(total_cells-total_errors)/total_cells:.1f}" if total_cells else "0.0"
 
-.page-wrap {
-  max-width: 1280px;
-  margin: 0 auto;
-}
-
-/* ── Header ─────────────────────────────────────────── */
-.report-header {
-  background: #0f172a;
-  color: #e2e8f0;
-  border-radius: 10px;
-  padding: 24px 28px;
-  margin-bottom: 28px;
-}
-
-.report-header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 16px;
-  color: #f8fafc;
-}
-
-.meta-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.meta-item {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  font-size: 0.82rem;
-}
-
-.meta-label {
-  color: #94a3b8;
-  min-width: 72px;
-  flex-shrink: 0;
-}
-
-.meta-value {
-  color: #cbd5e1;
-  word-break: break-all;
-}
-
-.stat-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.stat-box {
-  background: rgba(255,255,255,0.07);
-  border-radius: 6px;
-  padding: 10px 18px;
-  text-align: center;
-  min-width: 90px;
-}
-
-.stat-box.highlight { background: rgba(99,102,241,0.25); }
-
-.stat-number {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #f1f5f9;
-}
-
-.stat-label {
-  font-size: 0.72rem;
-  color: #94a3b8;
-  margin-top: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-/* ── Badges ──────────────────────────────────────────── */
-.badge-pass {
-  background: #22c55e;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
-  vertical-align: middle;
-  letter-spacing: 0.04em;
-}
-
-.badge-fail {
-  background: #ef4444;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
-  vertical-align: middle;
-  letter-spacing: 0.04em;
-}
-
-/* ── Puzzle cards ────────────────────────────────────── */
-.puzzle-card {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  margin-bottom: 20px;
-  padding: 22px 24px;
-}
-
-.card-header {
-  margin-bottom: 14px;
-}
-
-.card-header h2 {
-  font-size: 1.05rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.metaphor {
-  color: #64748b;
-  font-style: italic;
-  font-size: 0.88rem;
-  margin-top: 5px;
-}
-
-.error-box {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 0.82rem;
-  color: #b91c1c;
-  margin-bottom: 12px;
-}
-
-/* ── Two-column comparison ───────────────────────────── */
-.comparison-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-@media (max-width: 720px) {
-  .comparison-grid { grid-template-columns: 1fr; }
-}
-
-.col-heading {
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #475569;
-  margin-bottom: 6px;
-}
-
-/* ── JSON / pre blocks ───────────────────────────────── */
-.json-block {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 12px 14px;
-  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
-  font-size: 0.72rem;
-  line-height: 1.55;
-  overflow: auto;
-  max-height: 320px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: #1e293b;
-}
-
-.json-block.empty {
-  color: #94a3b8;
-  font-style: italic;
-}
-
-.reasoning-pre {
-  max-height: 240px;
-  background: #fafaf7;
-  border-color: #e5e5d8;
-  font-size: 0.70rem;
-}
-
-.raw-pre {
-  max-height: 200px;
-  background: #f9fafb;
-  border-color: #dde1e7;
-  font-size: 0.69rem;
-}
-
-/* ── Details / reasoning ─────────────────────────────── */
-details {
-  border-top: 1px solid #e8ecf0;
-  padding-top: 10px;
-  margin-top: 4px;
-}
-
-details + details {
-  margin-top: 8px;
-}
-
-summary {
-  cursor: pointer;
-  font-size: 0.82rem;
-  color: #475569;
-  user-select: none;
-  padding: 2px 0;
-  list-style: none;
-}
-
-summary::-webkit-details-marker { display: none; }
-summary::before { content: "▶ "; font-size: 0.65rem; }
-details[open] > summary::before { content: "▼ "; }
-summary:hover { color: #1e293b; }
-
-details[open] > summary { margin-bottom: 8px; }
-
-.empty-note {
-  color: #94a3b8;
-  font-style: italic;
-  font-size: 0.82rem;
-  padding: 4px 0;
-}
-
-/* ── TOC sidebar (small screens hide it) ─────────────── */
-.toc {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-  padding: 16px 18px;
-  margin-bottom: 20px;
-  font-size: 0.82rem;
-}
-
-.toc h2 { font-size: 0.88rem; margin-bottom: 8px; color: #374151; }
-.toc ol { padding-left: 20px; line-height: 1.9; }
-.toc a  { color: #6366f1; text-decoration: none; }
-.toc a:hover { text-decoration: underline; }
+    return f"""
+<header class="report-header">
+  <h1>MARC Reconstruction Report</h1>
+  <div class="meta-row">
+    <span><strong>Model:</strong> {model}</span>
+    <span><strong>Time:</strong> {timestamp}</span>
+  </div>
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-num">{parsed}/{total}</div><div class="stat-lbl">JSON Parsed</div></div>
+    <div class="stat-box"><div class="stat-num">{cell_acc}%</div><div class="stat-lbl">Cell Accuracy</div></div>
+    <div class="stat-box"><div class="stat-num">{total_cells - total_errors:,}</div><div class="stat-lbl">Correct Cells</div></div>
+    <div class="stat-box"><div class="stat-num">{total_errors:,}</div><div class="stat-lbl">Wrong Cells</div></div>
+  </div>
+  <p class="legend-note">
+    <strong>Reading the grids:</strong>
+    Cells with a <span style="display:inline-block;width:12px;height:12px;border:2px solid #ef4444;border-radius:2px;vertical-align:middle"></span>
+    red border are cells where the model&#39;s value differs from the correct value.
+    Model rows are shown above correct rows for each pair.
+  </p>
+</header>
 """
 
 
 # ---------------------------------------------------------------------------
-# Full report assembly
+# TOC
 # ---------------------------------------------------------------------------
 
-def build_report(data: dict) -> str:
+def _toc(puzzles):
+    items = []
+    for i, p in enumerate(puzzles):
+        name = p.get("name", f"puzzle_{i+1}").replace("_", " ").title()
+        e, c = _puzzle_accuracy(p)
+        pct = 100 * (c - e) / c if c else 0
+        color = "#22c55e" if e == 0 else ("#f59e0b" if pct >= 70 else "#ef4444")
+        dot = f'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{color};margin-right:5px;vertical-align:middle"></span>'
+        items.append(f'<li>{dot}<a href="#puzzle-{i+1}">{html.escape(name)}</a> <span style="color:#8b949e;font-size:0.8em">{pct:.0f}%</span></li>')
+    return f'<nav class="toc"><h2>Puzzles</h2><ol>{"".join(items)}</ol></nav>'
+
+
+# ---------------------------------------------------------------------------
+# CSS
+# ---------------------------------------------------------------------------
+
+CSS = """
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+  padding: 24px 16px;
+  line-height: 1.5;
+}
+.page-wrap { max-width: 1100px; margin: 0 auto; }
+
+/* Header */
+.report-header {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 22px 26px;
+  margin-bottom: 24px;
+}
+.report-header h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; }
+.meta-row { font-size: 0.82rem; color: #8b949e; margin-bottom: 14px; display: flex; gap: 20px; flex-wrap: wrap; }
+.meta-row strong { color: #e6edf3; }
+.stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.stat-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 16px; text-align: center; min-width: 100px; }
+.stat-num { font-size: 1.5rem; font-weight: 700; color: #3fb950; }
+.stat-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; margin-top: 2px; }
+.legend-note { font-size: 0.82rem; color: #8b949e; }
+.legend-note strong { color: #e6edf3; }
+
+/* TOC */
+.toc { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
+.toc h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e; margin-bottom: 10px; }
+.toc ol { padding-left: 18px; column-count: 2; column-gap: 24px; }
+.toc li { font-size: 0.83rem; margin-bottom: 4px; line-height: 1.5; }
+.toc a { color: #58a6ff; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+/* Puzzle cards */
+.puzzle-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  padding: 20px 22px;
+}
+.card-header { margin-bottom: 16px; }
+.card-header h2 { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.metaphor { color: #8b949e; font-style: italic; font-size: 0.85rem; margin-top: 5px; }
+
+/* Pair blocks */
+.pair-block { margin-bottom: 20px; }
+.pair-heading { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em; color: #3fb950; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.pair-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.pair-who { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; font-weight: 600; width: 48px; flex-shrink: 0; padding-top: 20px; }
+.grid-wrap { display: flex; flex-direction: column; }
+.grid-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e; margin-bottom: 4px; }
+.grid-empty { font-size: 0.75rem; color: #8b949e; font-style: italic; padding: 8px; border: 1px dashed #30363d; border-radius: 4px; }
+.arrow { font-size: 1.4rem; color: #8b949e; padding: 0 4px; align-self: center; padding-top: 20px; }
+
+/* Reasoning */
+details { margin-top: 14px; border-top: 1px solid #30363d; padding-top: 10px; }
+summary { cursor: pointer; font-size: 0.8rem; color: #8b949e; user-select: none; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "▶ "; font-size: 0.65rem; }
+details[open] > summary::before { content: "▼ "; }
+summary:hover { color: #e6edf3; }
+details[open] > summary { margin-bottom: 8px; }
+.reasoning-pre {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 0.7rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+  overflow: auto;
+  max-height: 200px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #8b949e;
+}
+
+@media (max-width: 600px) {
+  .toc ol { column-count: 1; }
+  .pair-row { gap: 6px; }
+}
+"""
+
+
+# ---------------------------------------------------------------------------
+# Full report
+# ---------------------------------------------------------------------------
+
+def build_report(data):
     puzzles = data.get("puzzles", [])
-
-    toc_items = "\n".join(
-        f'<li><a href="#puzzle-{i+1}">{_e(p.get("name", f"puzzle_{i+1}").replace("_", " ").title())}'
-        f' {_badge(p.get("parse_success", False))}</a></li>'
-        for i, p in enumerate(puzzles)
-    )
-
-    sections = "\n".join(_puzzle_section(p, i + 1) for i, p in enumerate(puzzles))
+    sections = "".join(_puzzle_section(p, i + 1) for i, p in enumerate(puzzles))
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -433,24 +411,13 @@ def build_report(data: dict) -> str:
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MARC Reconstruction Report</title>
-  <style>
-{CSS}
-  </style>
+  <style>{CSS}</style>
 </head>
 <body>
 <div class="page-wrap">
-
 {_summary_header(data)}
-
-<div class="toc">
-  <h2>Puzzles</h2>
-  <ol>
-{toc_items}
-  </ol>
-</div>
-
+{_toc(puzzles)}
 {sections}
-
 </div>
 </body>
 </html>
@@ -462,30 +429,27 @@ def build_report(data: dict) -> str:
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate HTML report from reconstruction results")
-    parser.add_argument("--input",  type=Path, default=INPUT_FILE,  help="Path to results.json")
-    parser.add_argument("--output", type=Path, default=OUTPUT_FILE, help="Path for output report.html")
+    parser = argparse.ArgumentParser(description="Generate visual HTML report from reconstruction results")
+    parser.add_argument("--input",  type=Path, default=INPUT_FILE)
+    parser.add_argument("--output", type=Path, default=OUTPUT_FILE)
     args = parser.parse_args()
 
     if not args.input.exists():
-        print(f"Error: results file not found: {args.input}", file=sys.stderr)
-        print("Run 'uv run code/scripts/run_reconstruction.py' first.", file=sys.stderr)
+        print(f"Error: {args.input} not found. Run run_reconstruction.py first.", file=sys.stderr)
         sys.exit(1)
 
-    try:
-        data = json.loads(args.input.read_text())
-    except json.JSONDecodeError as exc:
-        print(f"Error: could not parse {args.input}: {exc}", file=sys.stderr)
-        sys.exit(1)
-
+    data = json.loads(args.input.read_text())
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    html_content = build_report(data)
-    args.output.write_text(html_content, encoding="utf-8")
+    args.output.write_text(build_report(data), encoding="utf-8")
 
     puzzles = data.get("puzzles", [])
-    passed  = sum(1 for p in puzzles if p.get("parse_success"))
+    total_e = total_c = 0
+    for p in puzzles:
+        e, c = _puzzle_accuracy(p)
+        total_e += e; total_c += c
+    pct = 100 * (total_c - total_e) / total_c if total_c else 0
     print(f"Report generated: {args.output}")
-    print(f"  {passed}/{len(puzzles)} puzzles parsed successfully.")
+    print(f"  Cell accuracy: {pct:.1f}%  ({total_c-total_e:,}/{total_c:,} correct)")
     print(f"  Open with: open {args.output}")
 
 
