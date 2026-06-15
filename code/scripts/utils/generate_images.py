@@ -20,6 +20,31 @@ ARC_COLORS = [
     "#AAAAAA", "#F012BE", "#FF851B", "#ADD8E6", "#870C25",
 ]
 
+ARC_COLOR_NAMES = [
+    "black", "blue", "red", "green", "yellow",
+    "gray", "magenta", "orange", "lt.blue", "maroon",
+]
+
+
+def _add_legend(fig):
+    """Draw a color legend strip below the figure content."""
+    ax = fig.add_axes([0.03, 0.01, 0.94, 0.04])
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    for i, (color, name) in enumerate(zip(ARC_COLORS, ARC_COLOR_NAMES)):
+        rect = plt.Rectangle([i, 0.3], 0.85, 0.65, color=color)
+        ax.add_patch(rect)
+        # Outline for light colors
+        outline = plt.Rectangle([i, 0.3], 0.85, 0.65, fill=False,
+                                 edgecolor="#888888", linewidth=0.5)
+        ax.add_patch(outline)
+        ax.text(i + 0.425, 0.55, str(i), ha="center", va="center",
+                fontsize=7, fontweight="bold",
+                color="white" if i not in (4, 8) else "#333333")
+        ax.text(i + 0.425, 0.15, name, ha="center", va="center",
+                fontsize=5.5, color="#333333")
+
 
 def _plot_grid(ax, grid, title: str = ""):
     if not grid:
@@ -52,7 +77,9 @@ def visualize_puzzle_to_bytes(json_data: dict, show_solution: bool = False) -> b
     fig = plt.figure(figsize=(10, 3 * num_rows + 1), constrained_layout=True)
     if metaphor:
         fig.suptitle(f"Metaphor: {metaphor}", fontsize=14, wrap=True, fontweight="bold")
-        fig.get_layout_engine().set(rect=(0, 0, 1, 0.92))
+        fig.get_layout_engine().set(rect=(0, 0.07, 1, 0.92))
+    else:
+        fig.get_layout_engine().set(rect=(0, 0.07, 1, 1.0))
     subfigs = fig.subfigures(num_rows, 1, wspace=0.1, hspace=0.1)
     if num_rows == 1:
         subfigs = [subfigs]
@@ -69,6 +96,7 @@ def visualize_puzzle_to_bytes(json_data: dict, show_solution: bool = False) -> b
         else:
             axs[2].axis("off")
             axs[2].text(0.5, 0.5, "?", fontsize=30, ha="center", va="center")
+    _add_legend(fig)
     buf = io.BytesIO()
     plt.savefig(buf, format="png", bbox_inches="tight", dpi=120)
     plt.close(fig)

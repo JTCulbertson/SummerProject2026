@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NARC Visualizer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Input screen ── */
+    #input-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+      gap: 1rem;
+    }
+
+    #input-screen h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #3fb950;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    #input-screen p {
+      font-size: 0.85rem;
+      color: #8b949e;
+      margin-bottom: 0.5rem;
+    }
+
+    #json-input {
+      width: 100%;
+      max-width: 680px;
+      height: 240px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.78rem;
+      padding: 0.9rem 1rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #json-input:focus { border-color: #3fb950; }
+
+    #json-input.drag-over {
+      border-color: #3fb950;
+      background: rgba(63,185,80,0.06);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.4rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+    .btn-accent { background: #1f6feb; color: #fff; }
+
+    #error-msg {
+      color: #f85149;
+      font-size: 0.82rem;
+      max-width: 680px;
+      text-align: center;
+    }
+
+    #drop-hint {
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+
+    /* ── Puzzle screen ── */
+    #puzzle-screen { display: none; }
+
+    .puzzle-header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 1.1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .puzzle-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #f0f6fc;
+    }
+
+    .meta-pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 20px;
+      padding: 0.2em 0.75em;
+      color: #8b949e;
+    }
+
+    .meta-pill span { color: #e6edf3; }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    .puzzle-body {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── Narrative ── */
+    .narrative-block {
+      background: rgba(63,185,80,0.07);
+      border-left: 3px solid #3fb950;
+      border-radius: 0 6px 6px 0;
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+      font-size: 0.9rem;
+      color: #c9d1d9;
+      line-height: 1.65;
+    }
+
+    .section-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      color: #3fb950;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid #30363d;
+    }
+
+    /* ── Sequence ── */
+    .sequence-wrap {
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .sequence-row {
+      display: flex;
+      gap: 1.25rem;
+      padding-bottom: 0.25rem;
+      width: max-content;
+    }
+
+    .frame-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 0.85rem 1rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      min-width: 0;
+    }
+
+    .frame-card.is-masked {
+      border-color: #388bfd44;
+      background: #161b22;
+    }
+
+    .frame-label {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #8b949e;
+    }
+
+    .frame-label.masked-label { color: #388bfd; }
+
+    .grid-table {
+      border-collapse: collapse;
+      border: 1px solid #30363d;
+    }
+
+    .grid-table td {
+      width: 28px;
+      height: 28px;
+      font-size: 9px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 28px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* Masked placeholder */
+    .masked-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #30363d;
+      border-radius: 2px;
+      background: repeating-linear-gradient(
+        45deg,
+        #1c2128,
+        #1c2128 4px,
+        #21262d 4px,
+        #21262d 8px
+      );
+    }
+
+    .masked-q {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #388bfd;
+      opacity: 0.7;
+    }
+
+    /* ── Controls bar ── */
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    /* ── Color legend ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 2rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.72rem;
+      color: #8b949e;
+    }
+
+    .legend-swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.12);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Input screen ── -->
+<div id="input-screen">
+  <h1>NARC Visualizer</h1>
+  <p>Paste a NARC puzzle JSON below, or drag-and-drop a <code>.json</code> file anywhere on the page.</p>
+  <textarea id="json-input" placeholder="Paste NARC JSON here…" spellcheck="false"></textarea>
+  <div id="error-msg"></div>
+  <button class="btn btn-primary" onclick="loadFromTextarea()">Visualize</button>
+  <div id="drop-hint">or drag &amp; drop a .json file</div>
+</div>
+
+<!-- ── Puzzle screen ── -->
+<div id="puzzle-screen">
+  <div class="puzzle-header">
+    <div class="puzzle-title" id="ph-title"></div>
+    <div class="meta-pill">ID: <span id="ph-id"></span></div>
+    <div class="meta-pill">Creator: <span id="ph-creator"></span></div>
+    <div class="meta-pill" id="ph-diff-pill" style="display:none">Difficulty: <span id="ph-diff"></span></div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" onclick="resetToInput()">← Load New Puzzle</button>
+    </div>
+  </div>
+
+  <div class="puzzle-body">
+    <!-- Narrative -->
+    <div class="section-label">Narrative</div>
+    <div class="narrative-block" id="narrative-text"></div>
+
+    <!-- Sequence -->
+    <div class="section-label">Sequence</div>
+    <div class="controls-bar">
+      <button class="btn btn-accent" id="reveal-btn" onclick="toggleAnswers()">Reveal Answers</button>
+      <span id="masked-count" style="font-size:0.8rem;color:#8b949e;"></span>
+    </div>
+    <div class="sequence-wrap">
+      <div class="sequence-row" id="sequence-row"></div>
+    </div>
+
+    <!-- Color legend -->
+    <div class="section-label" style="margin-top:2.5rem">Color Legend</div>
+    <div class="legend" id="color-legend"></div>
+  </div>
+</div>
+
+<script>
+  const ARC_COLORS = [
+    "#000000", // 0 black
+    "#0074D9", // 1 blue
+    "#FF4136", // 2 red
+    "#2ECC40", // 3 green
+    "#FFDC00", // 4 yellow
+    "#AAAAAA", // 5 gray
+    "#F012BE", // 6 magenta
+    "#FF851B", // 7 orange
+    "#ADD8E6", // 8 light blue
+    "#870C25", // 9 maroon
+  ];
+  const ARC_NAMES = ["black","blue","red","green","yellow","gray","magenta","orange","lt blue","maroon"];
+  const DARK_IDX  = new Set([0,1,2,6,9]); // indices with dark bg → white text
+  const CELL      = 28;
+
+  let puzzleData    = null;
+  let answersShown  = false;
+
+  // ── Grid rendering ──────────────────────────────────────────────
+  function renderGrid(grid) {
+    const table = document.createElement("table");
+    table.className = "grid-table";
+    for (const row of grid) {
+      const tr = document.createElement("tr");
+      for (const val of row) {
+        const idx = Math.max(0, Math.min(9, val));
+        const td  = document.createElement("td");
+        td.style.background = ARC_COLORS[idx];
+        td.style.color       = DARK_IDX.has(idx) ? "#fff" : "#000";
+        td.textContent       = val;
+        tr.appendChild(td);
+      }
+      table.appendChild(tr);
+    }
+    return table;
+  }
+
+  function renderMasked(rows, cols) {
+    const div = document.createElement("div");
+    div.className = "masked-placeholder";
+    div.style.width  = (cols * CELL + 2) + "px";
+    div.style.height = (rows * CELL + 2) + "px";
+    const q = document.createElement("span");
+    q.className = "masked-q";
+    q.textContent = "?";
+    div.appendChild(q);
+    return div;
+  }
+
+  // ── Build puzzle view ────────────────────────────────────────────
+  function renderPuzzle(data) {
+    puzzleData   = data;
+    answersShown = false;
+
+    // Header
+    document.getElementById("ph-title").textContent   = data.title || "(no title)";
+    document.getElementById("ph-id").textContent      = data.puzzle_id || "—";
+    document.getElementById("ph-creator").textContent = data.creator   || "—";
+    const diff = data.difficulty || data.human_difficulty || data.ai_difficulty;
+    if (diff) {
+      document.getElementById("ph-diff").textContent = diff;
+      document.getElementById("ph-diff-pill").style.display = "";
+    } else {
+      document.getElementById("ph-diff-pill").style.display = "none";
+    }
+
+    // Narrative
+    document.getElementById("narrative-text").textContent = data.narrative || "(no narrative)";
+
+    // Masked count
+    const maskedPositions = data.masked_positions || [];
+    document.getElementById("masked-count").textContent =
+      maskedPositions.length
+        ? `${maskedPositions.length} masked frame${maskedPositions.length > 1 ? "s" : ""}`
+        : "No masked frames";
+
+    // Show/hide reveal button
+    document.getElementById("reveal-btn").style.display =
+      maskedPositions.length ? "" : "none";
+    document.getElementById("reveal-btn").textContent = "Reveal Answers";
+
+    // Sequence
+    const row = document.getElementById("sequence-row");
+    row.innerHTML = "";
+    for (const frame of (data.sequence || [])) {
+      const card = document.createElement("div");
+      card.className = "frame-card" + (frame.masked ? " is-masked" : "");
+
+      const lbl = document.createElement("div");
+      lbl.className = "frame-label" + (frame.masked ? " masked-label" : "");
+      lbl.textContent = frame.label || `#${frame.position}`;
+      card.appendChild(lbl);
+
+      const gridWrap = document.createElement("div");
+      gridWrap.dataset.position = frame.position;
+
+      if (frame.masked || frame.grid === null) {
+        const rows = frame.rows || 5;
+        const cols = frame.cols || 5;
+        gridWrap.appendChild(renderMasked(rows, cols));
+      } else {
+        gridWrap.appendChild(renderGrid(frame.grid));
+      }
+
+      card.appendChild(gridWrap);
+      row.appendChild(card);
+    }
+
+    // Color legend
+    const legend = document.getElementById("color-legend");
+    legend.innerHTML = "";
+    for (let i = 0; i < 10; i++) {
+      const item = document.createElement("div");
+      item.className = "legend-item";
+      const swatch = document.createElement("div");
+      swatch.className = "legend-swatch";
+      swatch.style.background = ARC_COLORS[i];
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(`${i} ${ARC_NAMES[i]}`));
+      legend.appendChild(item);
+    }
+
+    // Switch screens
+    document.getElementById("input-screen").style.display  = "none";
+    document.getElementById("puzzle-screen").style.display = "";
+  }
+
+  // ── Answer toggle ────────────────────────────────────────────────
+  function toggleAnswers() {
+    if (!puzzleData) return;
+    answersShown = !answersShown;
+    document.getElementById("reveal-btn").textContent =
+      answersShown ? "Hide Answers" : "Reveal Answers";
+
+    const answerGrids = puzzleData.answer_grids || {};
+    const maskedPositions = new Set(puzzleData.masked_positions || []);
+
+    for (const frame of (puzzleData.sequence || [])) {
+      if (!maskedPositions.has(frame.position)) continue;
+      const wrap = document.querySelector(`[data-position="${frame.position}"]`);
+      if (!wrap) continue;
+
+      wrap.innerHTML = "";
+      if (answersShown) {
+        const ansGrid = answerGrids[String(frame.position)];
+        if (ansGrid) {
+          wrap.appendChild(renderGrid(ansGrid));
+        } else {
+          const msg = document.createElement("div");
+          msg.style.cssText = "color:#8b949e;font-size:0.75rem;padding:8px";
+          msg.textContent = "(no answer)";
+          wrap.appendChild(msg);
+        }
+      } else {
+        const rows = frame.rows || (puzzleData.sequence[0]?.rows || 5);
+        const cols = frame.cols || (puzzleData.sequence[0]?.cols || 5);
+        wrap.appendChild(renderMasked(rows, cols));
+      }
+    }
+  }
+
+  // ── Load helpers ─────────────────────────────────────────────────
+  function loadJSON(text) {
+    document.getElementById("error-msg").textContent = "";
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      document.getElementById("error-msg").textContent = "Invalid JSON: " + e.message;
+      return;
+    }
+    if (!data.sequence) {
+      document.getElementById("error-msg").textContent =
+        'Not a valid NARC puzzle — missing "sequence" field.';
+      return;
+    }
+    renderPuzzle(data);
+  }
+
+  function loadFromTextarea() {
+    const txt = document.getElementById("json-input").value.trim();
+    if (!txt) {
+      document.getElementById("error-msg").textContent = "Please paste a NARC JSON first.";
+      return;
+    }
+    loadJSON(txt);
+  }
+
+  function resetToInput() {
+    document.getElementById("puzzle-screen").style.display = "none";
+    document.getElementById("input-screen").style.display  = "";
+    document.getElementById("json-input").value = "";
+    document.getElementById("error-msg").textContent = "";
+    puzzleData = null;
+    answersShown = false;
+  }
+
+  // ── Drag-and-drop ─────────────────────────────────────────────────
+  document.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    document.getElementById("json-input")?.classList.add("drag-over");
+  });
+
+  document.addEventListener("dragleave", () => {
+    document.getElementById("json-input")?.classList.remove("drag-over");
+  });
+
+  document.addEventListener("drop", (e) => {
+    e.preventDefault();
+    document.getElementById("json-input")?.classList.remove("drag-over");
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => loadJSON(ev.target.result);
+    reader.readAsText(file);
+  });
+
+  // ── Enter key in textarea ─────────────────────────────────────────
+  document.getElementById("json-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) loadFromTextarea();
+  });
+</script>
+</body>
+</html>

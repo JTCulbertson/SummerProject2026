@@ -1,10 +1,69 @@
 [
   {
+    "id": "week-4",
+    "date": "2026-06-15",
+    "version": "Week 4",
+    "title": "The Timeout That Wasn't (and Does Thinking Help?)",
+    "tags": [
+      "Results",
+      "Bug",
+      "Research"
+    ],
+    "excerpt": "A wave of “timeout” errors against the cluster turned out to be something else entirely. Fixing it rebuilt the request pipeline, uncovered a useful fact about streaming, and finally let the legend-and-thinking comparison run. The legend helped color accuracy; chain-of-thought, surprisingly, didn’t.",
+    "sections": [
+      {
+        "heading": "Overview",
+        "body": "Week 3 established that the vision model reconstructs MARC puzzle <em>structure</em> flawlessly but reads <em>colors</em> only about half the time. The plan for this stretch was a direct follow-up: add a color legend to the rendered images and switch on the model’s thinking mode, then measure whether either lifts color accuracy. Instead, most of the time went to a debugging detour — a wave of “timeout” errors from the MindRouter cluster that, on inspection, weren’t timeouts at all. Chasing that down rebuilt the whole request pipeline and surfaced a genuinely useful fact about how the cluster behaves. With the pipeline fixed, the legend-and-thinking comparison finally ran end to end."
+      },
+      {
+        "heading": "The “Timeout” That Wasn’t",
+        "body": "The symptom: the reconstruction run kept failing against a fast H200 cluster that had no business being slow. The thinking-mode run failed <strong>13 of 14</strong> puzzles; the no-thinking run dropped its 2 heaviest. The errors <em>looked</em> like timeouts, but the saved responses told a different story — every failure was an HTTP <code>404</code>, and the failures scaled precisely with <strong>output length</strong>, not cluster load.<div class=\"callout\">The chain: our requests were <strong>non-streaming</strong> with huge output budgets, so MindRouter had to buffer the entire multi-thousand-token response from the backend. That buffering overran the cluster’s 180s-per-attempt / 300s-total backend timeout, so MindRouter cancelled the generation. Repeated cancellations tripped each backend’s <strong>circuit breaker</strong>, and once every backend serving the model was tripped, the scheduler had no healthy backend left — so it returned <code>404</code>, not a timeout. Our own retry logic then made it worse by retrying those 404s with exponential backoff, turning each failure into a multi-minute hang.</div>The lesson: a powerful GPU cluster raises <em>throughput</em>, not single-stream <em>latency</em>. Generating tens of thousands of tokens one at a time is inherently sequential, and no amount of cluster horsepower beats a 300-second buffer window."
+      },
+      {
+        "heading": "What We Changed",
+        "items": [
+          "<strong>Streaming:</strong> switched every reconstruction request to server-sent events, accumulating the answer and the reasoning trace as separate deltas, so the connection stays alive through a long generation instead of buffering it all at once",
+          "<strong>Retry policy:</strong> stopped retrying <code>404</code>s (a client-side error per MindRouter’s own docs), stopped re-running expensive non-idempotent POSTs on a read timeout, and now surface MindRouter’s error body instead of a bare status code",
+          "<strong>Pacing:</strong> added a short delay between puzzles plus a circuit-breaker cooldown after any failure, so a tripped backend has time to recover instead of cascading into the next request",
+          "<strong>Budgets:</strong> right-sized the output token caps per mode rather than sending one oversized request that could never finish in time"
+        ]
+      },
+      {
+        "heading": "A Useful Discovery: Streaming Has No 300-Second Ceiling",
+        "body": "We had assumed the documented 300-second cap was a hard wall for every request. It isn’t. A deliberate probe — a <strong>streaming</strong> request with an absurd 60,000-token budget meant to force a server-side cutoff — instead ran for <strong>532 seconds (nearly 9 minutes) and finished cleanly</strong>, stopping only when it hit the token cap. The 300s timeout governs how long MindRouter waits for a <em>buffered</em> (non-streaming) response; once a stream is flowing, the request rides along as long as tokens keep arriving. This is exactly why switching to streaming didn’t just reduce the timeouts — it removed that failure mode entirely.<div class=\"stat-row\"><div class=\"stat-box\"><span class=\"stat-num\">532s</span><span class=\"stat-label\">Longest clean stream</span></div><div class=\"stat-box\"><span class=\"stat-num\">60,000</span><span class=\"stat-label\">Tokens, no cutoff</span></div><div class=\"stat-box\"><span class=\"stat-num\">113/s</span><span class=\"stat-label\">Decode rate</span></div><div class=\"stat-box\"><span class=\"stat-num\">1.7s</span><span class=\"stat-label\">Time to first token</span></div></div>"
+      },
+      {
+        "heading": "Results: The Legend Helps, Thinking Doesn’t",
+        "body": "With the pipeline fixed, the actual experiment ran. Adding a <strong>color legend</strong> to the images — a swatch mapping each integer to its color — lifted no-thinking cell accuracy from Week 3’s <strong>50.4%</strong> (no legend) to <strong>62.1%</strong> (legend) across the same 6,912 cells. That’s a clear, cheap win.<div class=\"stat-row\"><div class=\"stat-box\"><span class=\"stat-num\">62.1%</span><span class=\"stat-label\">No-think + legend</span></div><div class=\"stat-box\"><span class=\"stat-num\">50.4%</span><span class=\"stat-label\">Wk 3, no legend</span></div><div class=\"stat-box\"><span class=\"stat-num\">14/14</span><span class=\"stat-label\">No-think parsed</span></div><div class=\"stat-box\"><span class=\"stat-num\">9/14</span><span class=\"stat-label\">Thinking parsed</span></div></div><p>Thinking mode was the surprise. It parsed only 9 of 14 puzzles (more on the other 5 below), and even on the 9 it <em>did</em> answer, it gave no overall benefit: <strong>57.5%</strong> cell accuracy versus no-thinking’s <strong>59.5%</strong> on the exact same puzzles. Per-puzzle it was a high-variance coin flip — chain-of-thought helped a few and badly hurt others.</p><table><thead><tr><th>Puzzle (9 thinking answered)</th><th>No-think</th><th>Thinking</th></tr></thead><tbody><tr><td>the_cat_wants_to_play…</td><td>65.9%</td><td>88.8%</td></tr><tr><td>ill_only_help_if_i_have_to</td><td>51.5%</td><td>77.5%</td></tr><tr><td>you_know_if_someone_else_knows</td><td>61.3%</td><td>71.7%</td></tr><tr><td>you_could_smell_it_from_a_mile_away</td><td>31.6%</td><td>52.4%</td></tr><tr><td>light_illuminates_walls…</td><td>81.3%</td><td>80.3%</td></tr><tr><td>go_where_its_green…slowpokes</td><td>72.7%</td><td>65.6%</td></tr><tr><td>check_left_check_right…</td><td>74.2%</td><td>58.6%</td></tr><tr><td>protect_as_many_as_you_can</td><td>64.5%</td><td>47.1%</td></tr><tr><td>vote_according_to_your_party</td><td>64.2%</td><td>19.4%</td></tr></tbody></table><p style=\"margin-top:1rem\"><a href=\"report-week4-nothinking.html\">No-thinking visual report →</a> &nbsp;·&nbsp; <a href=\"report-week4-thinking.html\">Thinking visual report →</a></p>"
+      },
+      {
+        "heading": "The Reasoning-Runaway Problem",
+        "body": "Why did thinking mode fail to answer 5 puzzles outright? Not a timeout, not a crash — the model simply <strong>never stopped reasoning</strong>. On dense puzzles it narrates the grids cell-by-cell in its chain-of-thought (“row 4 col 6 is light blue, row 4 col 7 is green…”), burning its entire token budget on transcription before it ever emits the JSON answer. The reasoning trace runs to 20,000–30,000 tokens and gets cut off mid-sentence, leaving the answer field empty.<table><thead><tr><th>Puzzle (no JSON produced)</th><th>Reasoning at cutoff</th></tr></thead><tbody><tr><td>traffic_has_rules_follow_them</td><td>~30,200 tokens</td></tr><tr><td>green_means_go…traffic_jams</td><td>~23,700 tokens</td></tr><tr><td>debris_protects_little_fish</td><td>~22,200 tokens</td></tr><tr><td>fish_that_see_the_fisherman…</td><td>~21,600 tokens</td></tr><tr><td>using_your_blush…depletes_it</td><td>~21,400 tokens</td></tr></tbody></table><p style=\"margin-top:1rem\">We tried to rein it in — prompts forbidding cell-by-cell transcription, an explicit “two short paragraphs then answer” limit, and a small temperature bump to break repetition loops. These rescued most puzzles, but a stubborn handful ignore every brevity instruction and run away regardless. Low-effort reasoning is not something this model can be reliably forced into for dense grids.</p>"
+      },
+      {
+        "heading": "Interpretation",
+        "body": "<div class=\"callout\">The color legend is a clean win: cheap to add, ~12 points of cell accuracy, no downside. Naive chain-of-thought is not — it doesn’t improve color perception on the puzzles it answers, and it actively risks producing nothing at all on the dense ones, where the model spends its whole budget describing cells instead of committing to an answer.</div>The throughline from Week 3 holds: the bottleneck is <em>perception</em>, not <em>reasoning</em>. Giving the model more room to think doesn’t help it see colors it was already misreading — it just gives it more room to second-guess. The reference signal (the legend) helps; the deliberation (thinking) doesn’t."
+      },
+      {
+        "heading": "Next Steps",
+        "items": [
+          "Make the thinking comparison complete by taming the runaway puzzles — likely a two-pass “reason, then answer in a separate call” structure so reasoning length can’t starve the answer",
+          "Push the legend idea further: explicit integer labels printed on each cell, or larger / higher-contrast swatches, to attack the color-disambiguation bottleneck head-on",
+          "Probe <em>which</em> color pairs the model confuses most, using the per-cell diff data already in the visual reports",
+          "Begin the core MARC question now that the pipeline is solid: does the metaphor clue improve puzzle-solving accuracy over a no-metaphor baseline?"
+        ]
+      }
+    ]
+  },
+  {
     "id": "week-3",
     "date": "2026-06-01",
     "version": "Week 3",
     "title": "Can a VLLM Read a MARC Puzzle?",
-    "tags": ["Results", "Research"],
+    "tags": [
+      "Results",
+      "Research"
+    ],
     "excerpt": "Benchmarked a vision LLM on pure image-to-JSON reconstruction of all 14 MARC puzzles. The model nailed the structure every time — but color accuracy tells a more complicated story.",
     "sections": [
       {
@@ -53,7 +112,10 @@
     "date": "2026-05-20",
     "version": "Week 2",
     "title": "Baseline Model & Data Pipeline",
-    "tags": ["Progress", "Research"],
+    "tags": [
+      "Progress",
+      "Research"
+    ],
     "excerpt": "Implemented the baseline model and built the data ingestion pipeline. First experiments are running.",
     "sections": [
       {
@@ -88,7 +150,10 @@
     "date": "2026-05-06",
     "version": "Week 1",
     "title": "Project Kickoff & Literature Review",
-    "tags": ["Setup", "Research"],
+    "tags": [
+      "Setup",
+      "Research"
+    ],
     "excerpt": "Established the project framework, set up the development environment, and completed the initial literature review.",
     "sections": [
       {

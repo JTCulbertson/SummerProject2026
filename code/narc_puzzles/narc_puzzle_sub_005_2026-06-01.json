@@ -1,0 +1,260 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-06-01T21:23:43.487721Z",
+  "puzzle_id": "sub_005",
+  "title": "Lunch",
+  "narrative": "Four friends get lunch together every day. They go to a ramen place downtown and have particularities about their order. Terb gets the same thing every day, ramen with green onions on top. Niloc gets the same thing every day, ramen with hot sauce across the noodles. On Wednesday, Terb and Niloc treat themselves to extra green onions and extra hot sauce. Nosaj gets creative. Starting on Monday, he gets green onions with a little hot sauce. Tuesday, he gets a portion of dark meat with no other toppings. Like Terb and Niloc on Wednesday, Nosaj goes all out with half meat and a little green onions with hot sauce. Eolhc keeps it simple with plain ramen every day. On Thursday, everyone returns to their normal Monday order.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": [
+        [
+          3,
+          3,
+          0,
+          4,
+          2
+        ],
+        [
+          4,
+          4,
+          0,
+          2,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          3,
+          0,
+          4,
+          4
+        ],
+        [
+          2,
+          4,
+          0,
+          4,
+          4
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": "Mon."
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          3,
+          3,
+          0,
+          4,
+          2
+        ],
+        [
+          4,
+          4,
+          0,
+          2,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          9,
+          4,
+          0,
+          4,
+          4
+        ],
+        [
+          9,
+          4,
+          0,
+          4,
+          4
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": "Tues."
+    },
+    {
+      "position": 2,
+      "grid": [
+        [
+          3,
+          3,
+          0,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          0,
+          2,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          9,
+          3,
+          0,
+          4,
+          4
+        ],
+        [
+          9,
+          2,
+          0,
+          4,
+          4
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": "Wed."
+    },
+    {
+      "position": 3,
+      "grid": null,
+      "rows": 5,
+      "cols": 5,
+      "label": "Thurs.",
+      "masked": true
+    }
+  ],
+  "masked_positions": [
+    3
+  ],
+  "answer_grids": {
+    "3": [
+      [
+        3,
+        3,
+        0,
+        4,
+        2
+      ],
+      [
+        4,
+        4,
+        0,
+        2,
+        4
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        3,
+        3,
+        0,
+        4,
+        4
+      ],
+      [
+        2,
+        4,
+        0,
+        4,
+        4
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "active",
+  "created_at": "2026-05-27 17:11:34",
+  "variants": [
+    {
+      "variant_id": 1023,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "Four friends get lunch together every day. They go to a ramen place downtown and have particularities about their order. Terb gets the same thing every day, ramen with green onions on top. Niloc gets the same thing every day, ramen with hot sauce across the noodles. On Wednesday, Terb and Niloc treat themselves to extra green onions and extra hot sauce. Nosaj gets creative. Starting on Monday, he gets green onions with a little hot sauce. Tuesday, he gets a portion of dark meat with no other toppings. Like Terb and Niloc on Wednesday, Nosaj goes all out with half meat and a little green onions with hot sauce. Eolhc keeps it simple with plain ramen every day. On Thursday, everyone returns to their normal Monday order.",
+      "generator": "human",
+      "created_at": "2026-05-27 17:11:34"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}
