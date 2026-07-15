@@ -93,6 +93,15 @@ body {
   flex: 1;
 }
 
+.site-nav-link {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.site-nav-link:hover { color: var(--accent); }
+
 .theme-toggle {
   background: none;
   border: 1px solid var(--border);
@@ -238,6 +247,7 @@ body {
 .tag-setup    { background: var(--tag-yellow-bg); color: var(--tag-yellow); }
 .tag-results  { background: var(--tag-purple-bg); color: var(--tag-purple); }
 .tag-bug      { background: var(--tag-red-bg);    color: var(--tag-red);    }
+.tag-tools    { background: var(--tag-purple-bg); color: var(--tag-purple); }
 .tag-default  { background: var(--tag-gray-bg);   color: var(--tag-gray);   }
 
 /* ── Single update page ── */

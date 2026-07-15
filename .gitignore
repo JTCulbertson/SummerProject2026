@@ -2,6 +2,10 @@
 .venv
 keys.txt
 
+# Python
+__pycache__/
+*.pyc
+
 # LaTeX aux files
 *.aux
 *.log

@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Greyscale Pattern Lab — ARC Puzzles</title>
+<script>
+  // Apply saved theme before paint to avoid a flash (shares the site's "theme" key).
+  (function () {
+    try {
+      var saved = localStorage.getItem("theme");
+      var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if ((saved || (prefersDark ? "dark" : "light")) === "light")
+        document.documentElement.dataset.theme = "light";
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel2: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --link: #58a6ff;
+    --accent: #238636;
+    --accent-hover: #2ea043;
+    --accent-glow: rgba(63,185,80,0.12);
+    --canvas-bg: #010409;
+  }
+  /* ── Light theme overrides (mirrors site style.css) ── */
+  [data-theme="light"] {
+    --bg: #ffffff;
+    --panel: #f6f8fa;
+    --panel2: #eef1f4;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #636e7b;
+    --link: #0969da;
+    --accent: #1a7f37;
+    --accent-hover: #1f9c40;
+    --accent-glow: rgba(26,127,55,0.08);
+    --canvas-bg: #d0d7de;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    transition: background 0.2s, color 0.2s;
+  }
+  header {
+    padding: 1.4rem 2rem 1rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  header h1 { margin: 0 0 .25rem; font-size: 1.4rem; }
+  header p { margin: 0; color: var(--muted); font-size: .9rem; max-width: 70ch; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0.4rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+  .theme-toggle svg { width: 15px; height: 15px; display: block; }
+  .theme-toggle:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-glow); }
+  .home-link { font-size: .8rem; color: var(--link); text-decoration: none; margin-right: .8rem; }
+  .home-link:hover { text-decoration: underline; }
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    align-items: start;
+  }
+  .sidebar {
+    padding: 1.25rem;
+    border-right: 1px solid var(--border);
+    min-height: calc(100vh - 90px);
+  }
+  .main { padding: 1.25rem 1.5rem 4rem; min-width: 0; }
+  .section-label {
+    text-transform: uppercase;
+    font-size: .7rem;
+    letter-spacing: .07em;
+    color: var(--muted);
+    font-weight: 700;
+    margin: 1.5rem 0 .6rem;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── Digit palette editor ── */
+  .digit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: .55rem;
+  }
+  .digit-slot {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .5rem;
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+  }
+  .swatch {
+    width: 44px; height: 44px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+    image-rendering: pixelated;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: .8rem;
+    position: relative;
+  }
+  .swatch .dnum {
+    position: absolute; top: 1px; left: 3px;
+    font-size: .6rem; color: var(--muted); font-weight: 700;
+    text-shadow: 0 0 2px #000;
+  }
+  .slot-btns { display: flex; flex-direction: column; gap: .2rem; flex: 1; }
+  .slot-btns button {
+    font-size: .68rem; padding: .18rem .3rem; width: 100%;
+  }
+
+  /* ── Controls ── */
+  button {
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .35rem .7rem;
+    cursor: pointer;
+    font-size: .82rem;
+  }
+  button:hover { border-color: var(--link); }
+  button.primary { background: var(--accent); border-color: var(--accent); }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .control-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .55rem; font-size: .84rem; }
+  .control-row label { color: var(--muted); flex: 1; }
+  input[type="range"] { flex: 1.4; }
+  select, input[type="text"] {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: .3rem .4rem;
+    font-size: .82rem;
+  }
+  .seg { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .seg button {
+    border: none; border-radius: 0; flex: 1; background: var(--panel);
+    font-size: .78rem; padding: .4rem .3rem;
+  }
+  .seg button.active { background: var(--accent); }
+  .chk { display: flex; align-items: center; gap: .4rem; font-size: .84rem; color: var(--muted); margin-bottom: .45rem; cursor: pointer; }
+
+  textarea {
+    width: 100%; min-height: 120px; resize: vertical;
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .78rem; padding: .5rem;
+  }
+  .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin: .6rem 0; }
+
+  /* ── Puzzle output ── */
+  .puzzle-meta { font-size: 1.05rem; font-weight: 600; margin: .5rem 0 1rem; }
+  .pair-row {
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 1.1rem; flex-wrap: wrap;
+  }
+  .pair-label { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; }
+  .arrow { font-size: 1.6rem; color: var(--muted); }
+  .grid-canvas { border: 1px solid var(--border); border-radius: 4px; image-rendering: pixelated; background: var(--canvas-bg); }
+  .cell-block { display: flex; flex-direction: column; }
+  .empty-hint { color: var(--muted); font-size: .9rem; }
+  .error-box { color: #ff7b72; background: #24141433; border: 1px solid #ff7b7255; border-radius: 6px; padding: .6rem .8rem; font-size: .85rem; margin: .6rem 0; white-space: pre-wrap; }
+
+  /* ── Draw modal ── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: #000a; display: none;
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.2rem; width: 340px;
+  }
+  .modal h3 { margin: 0 0 .8rem; font-size: 1rem; }
+  #draw-canvas { border: 1px solid var(--border); border-radius: 6px; cursor: crosshair; touch-action: none; display: block; margin: 0 auto .8rem; background: #fff; }
+  .swatch-preview { display:flex; gap:.4rem; align-items:center; margin-bottom:.6rem; }
+  .swatch-preview .box { width:24px; height:24px; border:1px solid var(--border); border-radius:4px; }
+  code { background: var(--panel2); padding: .1rem .3rem; border-radius: 4px; font-size: .82em; }
+  a { color: var(--link); }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-top">
+    <h1>Greyscale Pattern Lab</h1>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle light/dark theme" title="Toggle theme">
+      <svg id="icon-moon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M6 .278a.768.768 0 01.08.858 7.208 7.208 0 00-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 01.81.316.733.733 0 01-.031.893A8.349 8.349 0 018.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 016 .278z"/>
+      </svg>
+      <svg id="icon-sun" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style="display:none">
+        <path d="M8 12a4 4 0 100-8 4 4 0 000 8zM8 0a.5.5 0 01.5.5v2a.5.5 0 01-1 0v-2A.5.5 0 018 0zm0 13a.5.5 0 01.5.5v2a.5.5 0 01-1 0v-2A.5.5 0 018 13zm8-5a.5.5 0 01-.5.5h-2a.5.5 0 010-1h2a.5.5 0 01.5.5zM3 8a.5.5 0 01-.5.5h-2a.5.5 0 010-1h2A.5.5 0 013 8zm10.657-5.657a.5.5 0 010 .707l-1.414 1.415a.5.5 0 11-.707-.707l1.414-1.414a.5.5 0 01.707 0zm-9.193 9.193a.5.5 0 010 .707L3.05 13.657a.5.5 0 01-.707-.707l1.414-1.414a.5.5 0 01.707 0zm9.193 2.121a.5.5 0 01-.707 0l-1.414-1.414a.5.5 0 01.707-.707l1.414 1.414a.5.5 0 010 .707zM4.464 4.465a.5.5 0 01-.707 0L2.343 3.05a.5.5 0 11.707-.707l1.414 1.414a.5.5 0 010 .707z"/>
+      </svg>
+    </button>
+  </div>
+  <p><a class="home-link" href="index.html">← Summer Project 2026</a>Design a per-digit visual for values 0–9 (draw, upload an image, or use a grey shade), load an ARC-style puzzle
+     JSON, and preview the whole puzzle re-rendered with your design. Export the result as PNG to compare which
+     greyscale representation best preserves the puzzle. Everything runs locally — this file is fully self-contained
+     and shareable.</p>
+</header>
+
+<div class="layout">
+  <!-- ─────────── SIDEBAR ─────────── -->
+  <aside class="sidebar">
+    <div class="section-label">Render mode</div>
+    <div class="seg" id="mode-seg">
+      <button data-mode="grey" class="active">Grey shades</button>
+      <button data-mode="custom">Custom images</button>
+      <button data-mode="color">Original colors</button>
+    </div>
+
+    <div class="section-label">Digit visuals (0–9)</div>
+    <div class="digit-grid" id="digit-grid"></div>
+
+    <div class="section-label" id="grey-controls-label">Grey ramp</div>
+    <div id="grey-controls">
+      <div class="control-row">
+        <label>Dark end</label>
+        <input type="range" id="grey-min" min="0" max="255" value="30">
+        <span id="grey-min-v" style="width:2.2em;text-align:right">30</span>
+      </div>
+      <div class="control-row">
+        <label>Light end</label>
+        <input type="range" id="grey-max" min="0" max="255" value="235">
+        <span id="grey-max-v" style="width:2.2em;text-align:right">235</span>
+      </div>
+      <label class="chk"><input type="checkbox" id="grey-invert"> Invert ramp</label>
+    </div>
+
+    <div class="section-label">Display</div>
+    <div class="control-row">
+      <label>Background (0)</label>
+      <div class="seg" id="bg-seg" style="flex:1.4">
+        <button data-bg="#000000" class="active">Black</button>
+        <button data-bg="#ffffff">White</button>
+      </div>
+    </div>
+    <div class="control-row">
+      <label>Cell size</label>
+      <input type="range" id="cell-size" min="8" max="48" value="24">
+      <span id="cell-size-v" style="width:2.6em;text-align:right">24px</span>
+    </div>
+    <label class="chk"><input type="checkbox" id="show-labels"> Overlay digit numbers</label>
+    <label class="chk"><input type="checkbox" id="show-grid" checked> Show gridlines</label>
+
+    <div class="section-label">Reset</div>
+    <button id="clear-all">Clear all digit visuals</button>
+  </aside>
+
+  <!-- ─────────── MAIN ─────────── -->
+  <main class="main">
+    <div class="section-label">Puzzle JSON</div>
+    <textarea id="json-input" placeholder='Paste an ARC-style puzzle here, e.g. {"metaphor":"...","train":[{"input":[[0,1],[1,0]],"output":[[1,0],[0,1]]}],"test":[{"input":[[0,0],[1,1]],"output":[[1,1],[0,0]]}]}'></textarea>
+    <div class="btn-row">
+      <button class="primary" id="render-btn">Render puzzle</button>
+      <label class="upload-wrap">
+        <button type="button" onclick="this.parentNode.querySelector('input').click()">Upload .json</button>
+        <input type="file" accept=".json,application/json" id="json-file" style="display:none">
+      </label>
+      <button id="load-sample">Load sample</button>
+      <button id="show-solution-toggle">Reveal test outputs: <span id="sol-state">off</span></button>
+      <button id="export-png">Export PNG</button>
+    </div>
+    <div id="error" class="error-box" style="display:none"></div>
+
+    <div class="section-label">Preview</div>
+    <div id="output"><div class="empty-hint">Load a puzzle and click <em>Render puzzle</em>.</div></div>
+  </main>
+</div>
+
+<!-- ─────────── DRAW MODAL ─────────── -->
+<div class="modal-backdrop" id="draw-modal">
+  <div class="modal">
+    <h3 id="draw-title">Draw digit</h3>
+    <canvas id="draw-canvas" width="192" height="192"></canvas>
+    <div class="control-row">
+      <label>Brush shade</label>
+      <input type="range" id="brush-shade" min="0" max="255" value="0">
+      <span class="box" id="brush-preview" style="width:22px;height:22px;border:1px solid var(--border);border-radius:4px;background:#000"></span>
+    </div>
+    <div class="control-row">
+      <label>Brush size</label>
+      <input type="range" id="brush-size" min="2" max="48" value="16">
+      <span id="brush-size-v" style="width:2.4em;text-align:right">16</span>
+    </div>
+    <label class="chk"><input type="checkbox" id="draw-transparent" checked> Transparent background (else white)</label>
+    <div class="btn-row">
+      <button id="draw-eraser">Eraser</button>
+      <button id="draw-clear">Clear</button>
+      <button class="primary" id="draw-save">Save</button>
+      <button id="draw-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Reference ARC palette (from code/narc_visualizer.html) ──
+const ARC_COLORS = [
+  "#000000","#0074D9","#FF4136","#2ECC40","#FFDC00",
+  "#AAAAAA","#F012BE","#FF851B","#ADD8E6","#870C25",
+];
+const DARK_IDX = new Set([0,1,2,6,9]); // dark bg → white label
+
+const STORE_KEY = "greyscale-lab-v1";
+
+// ── State ──
+const state = {
+  mode: "grey",              // grey | custom | color
+  images: Array(10).fill(null),  // data-URL per digit (0-9)
+  greyMin: 30, greyMax: 235, greyInvert: false,
+  bg: "#000000",
+  cellSize: 24,
+  showLabels: false,
+  showGrid: true,
+  showSolution: false,
+  json: "",
+};
+const imgCache = Array(10).fill(null); // decoded Image objects
+let puzzleData = null;
+
+// ── Persistence ──
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return;
+    Object.assign(state, JSON.parse(raw));
+  } catch (e) {}
+}
+
+// ── Helpers ──
+function greyForDigit(n) {
+  // Map 0..9 across the ramp; 0 uses background elsewhere but ramp still valid.
+  const t = n / 9;
+  let v = state.greyMin + t * (state.greyMax - state.greyMin);
+  if (state.greyInvert) v = state.greyMax - (v - state.greyMin);
+  v = Math.round(Math.max(0, Math.min(255, v)));
+  return `rgb(${v},${v},${v})`;
+}
+function labelColorFor(n, fillCss) {
+  if (state.mode === "color") return DARK_IDX.has(n) ? "#fff" : "#000";
+  // luminance-based for grey/custom
+  const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(fillCss);
+  if (m) { const lum = 0.299*+m[1]+0.587*+m[2]+0.114*+m[3]; return lum < 128 ? "#fff" : "#000"; }
+  // hex bg
+  const hex = fillCss.replace('#','');
+  if (hex.length === 6) {
+    const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+    return (0.299*r+0.587*g+0.114*b) < 128 ? "#fff" : "#000";
+  }
+  return "#fff";
+}
+function normalizeCell(v) {
+  const n = parseInt(String(v), 10);
+  if (isNaN(n)) return 0;
+  return Math.max(0, Math.min(9, n));
+}
+
+// ── Canvas grid rendering ──
+function drawGridToCtx(ctx, grid, ox, oy, cs) {
+  const rows = grid.length, cols = grid[0] ? grid[0].length : 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const n = normalizeCell(grid[r][c]);
+      const x = ox + c * cs, y = oy + r * cs;
+      let fill;
+      if (state.mode === "color") fill = ARC_COLORS[n];
+      else if (n === 0) fill = state.bg;
+      else fill = greyForDigit(n);
+
+      const hasImg = imgCache[n];
+      if (state.mode === "custom" && hasImg) {
+        // paint background first (bg for 0, else grey fallback tone) then image
+        ctx.fillStyle = (n === 0) ? state.bg : fill;
+        ctx.fillRect(x, y, cs, cs);
+        ctx.drawImage(imgCache[n], x, y, cs, cs);
+      } else {
+        ctx.fillStyle = fill;
+        ctx.fillRect(x, y, cs, cs);
+      }
+
+      if (state.showLabels && cs >= 12) {
+        ctx.fillStyle = labelColorFor(n, fill);
+        ctx.font = `${Math.round(cs*0.55)}px ui-monospace, monospace`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(String(n), x + cs/2, y + cs/2 + 1);
+      }
+    }
+  }
+  if (state.showGrid && cs >= 6) {
+    ctx.strokeStyle = "rgba(128,128,128,0.5)";
+    ctx.lineWidth = 1;
+    for (let r = 0; r <= rows; r++) {
+      ctx.beginPath(); ctx.moveTo(ox + 0.5, oy + r*cs + 0.5); ctx.lineTo(ox + cols*cs + 0.5, oy + r*cs + 0.5); ctx.stroke();
+    }
+    for (let c = 0; c <= cols; c++) {
+      ctx.beginPath(); ctx.moveTo(ox + c*cs + 0.5, oy + 0.5); ctx.lineTo(ox + c*cs + 0.5, oy + rows*cs + 0.5); ctx.stroke();
+    }
+  }
+}
+
+function makeGridCanvas(grid) {
+  const cs = state.cellSize;
+  const rows = grid.length, cols = grid[0] ? grid[0].length : 0;
+  const cv = document.createElement("canvas");
+  cv.width = cols * cs + 1; cv.height = rows * cs + 1;
+  cv.className = "grid-canvas";
+  drawGridToCtx(cv.getContext("2d"), grid, 0, 0, cs);
+  return cv;
+}
+
+// ── Puzzle parse ──
+function parsePuzzle(text) {
+  const data = JSON.parse(text);
+  // Normalize into {metaphor, train:[{input,output}], test:[...]}
+  let train = [], test = [];
+  const isGrid = g => Array.isArray(g) && g.length && Array.isArray(g[0]);
+  if (Array.isArray(data.train)) train = data.train;
+  if (Array.isArray(data.test)) test = data.test;
+  if (!train.length && !test.length) {
+    if (isGrid(data.input)) train = [{ input: data.input, output: data.output }];
+    else if (isGrid(data)) train = [{ input: data }];
+    else throw new Error("Could not find `train`/`test` arrays or an `input` grid in this JSON.");
+  }
+  return { metaphor: data.metaphor || "", train, test };
+}
+
+// ── Render puzzle to DOM ──
+function renderPuzzle() {
+  const out = document.getElementById("output");
+  out.innerHTML = "";
+  if (!puzzleData) { out.innerHTML = '<div class="empty-hint">Load a puzzle and click <em>Render puzzle</em>.</div>'; return; }
+  if (puzzleData.metaphor) {
+    const m = document.createElement("div");
+    m.className = "puzzle-meta";
+    m.textContent = "Metaphor: " + puzzleData.metaphor;
+    out.appendChild(m);
+  }
+  const rows = [
+    ...puzzleData.train.map((p,i) => ({ p, label: `Train ${i+1}`, reveal: true })),
+    ...puzzleData.test.map((p,i) => ({ p, label: `Test ${i+1}`, reveal: state.showSolution })),
+  ];
+  for (const { p, label, reveal } of rows) {
+    const row = document.createElement("div"); row.className = "pair-row";
+    const inBlock = block(`${label} Input`, makeGridCanvas(p.input));
+    row.appendChild(inBlock);
+    const arrow = document.createElement("div"); arrow.className = "arrow"; arrow.textContent = "→";
+    row.appendChild(arrow);
+    if (p.output && reveal) {
+      row.appendChild(block(`${label} Output`, makeGridCanvas(p.output)));
+    } else {
+      const q = document.createElement("div"); q.className = "arrow"; q.textContent = "?";
+      row.appendChild(block(`${label} Output`, q));
+    }
+    out.appendChild(row);
+  }
+  function block(lbl, node) {
+    const b = document.createElement("div"); b.className = "cell-block";
+    const l = document.createElement("div"); l.className = "pair-label"; l.textContent = lbl;
+    b.appendChild(l); b.appendChild(node); return b;
+  }
+}
+
+// ── Export composed PNG ──
+function exportPNG() {
+  if (!puzzleData) { showError("Nothing to export — render a puzzle first."); return; }
+  const cs = state.cellSize, pad = 16, gap = cs * 1.2, labelH = 16;
+  const rows = [
+    ...puzzleData.train.map((p,i) => ({ p, label: `Train ${i+1}`, reveal: true })),
+    ...puzzleData.test.map((p,i) => ({ p, label: `Test ${i+1}`, reveal: state.showSolution })),
+  ];
+  const metaH = puzzleData.metaphor ? 28 : 0;
+  let totalW = 0, totalH = pad*2 + metaH;
+  const rowDims = rows.map(({p}) => {
+    const iw = (p.input[0]?.length||0)*cs, ih = p.input.length*cs;
+    const ow = p.output ? (p.output[0]?.length||0)*cs : cs, oh = p.output ? p.output.length*cs : cs;
+    const w = iw + gap + ow, h = Math.max(ih, oh) + labelH;
+    totalW = Math.max(totalW, w); totalH += h + gap;
+    return { iw, ih, ow, oh, w, h };
+  });
+  totalW += pad*2;
+  const themeCss = getComputedStyle(document.documentElement);
+  const exBg = (themeCss.getPropertyValue("--bg").trim() || "#0d1117");
+  const exText = (themeCss.getPropertyValue("--text").trim() || "#e6edf3");
+  const exMuted = (themeCss.getPropertyValue("--muted").trim() || "#8b949e");
+  const cv = document.createElement("canvas");
+  cv.width = Math.ceil(totalW); cv.height = Math.ceil(totalH);
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = exBg; ctx.fillRect(0,0,cv.width,cv.height);
+  let y = pad;
+  if (puzzleData.metaphor) {
+    ctx.fillStyle = exText; ctx.font = "600 16px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("Metaphor: " + puzzleData.metaphor, pad, y); y += metaH;
+  }
+  rows.forEach(({p, label, reveal}, idx) => {
+    const d = rowDims[idx];
+    ctx.fillStyle = exMuted; ctx.font = "11px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(label, pad, y);
+    const gy = y + labelH;
+    drawGridToCtx(ctx, p.input, pad, gy, cs);
+    ctx.fillStyle = exMuted; ctx.font = "20px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("→", pad + d.iw + gap/2, gy + d.ih/2);
+    if (p.output && reveal) drawGridToCtx(ctx, p.output, pad + d.iw + gap, gy, cs);
+    else { ctx.fillText("?", pad + d.iw + gap + cs/2, gy + cs/2); }
+    y += d.h + gap;
+  });
+  const a = document.createElement("a");
+  a.download = "puzzle-greyscale.png";
+  a.href = cv.toDataURL("image/png");
+  a.click();
+}
+
+// ── Errors ──
+function showError(msg) {
+  const e = document.getElementById("error");
+  e.style.display = "block"; e.textContent = msg;
+}
+function clearError() { document.getElementById("error").style.display = "none"; }
+
+// ── Image cache rebuild ──
+function rebuildImageCache(cb) {
+  let pending = 0, done = false;
+  const finish = () => { if (done && pending === 0 && cb) cb(); };
+  for (let n = 0; n < 10; n++) {
+    if (state.images[n]) {
+      pending++;
+      const img = new Image();
+      img.onload = () => { imgCache[n] = img; pending--; finish(); };
+      img.onerror = () => { imgCache[n] = null; pending--; finish(); };
+      img.src = state.images[n];
+    } else {
+      imgCache[n] = null;
+    }
+  }
+  done = true; finish();
+}
+
+// ── Sidebar: digit slots ──
+function buildDigitSlots() {
+  const grid = document.getElementById("digit-grid");
+  grid.innerHTML = "";
+  for (let n = 0; n < 10; n++) {
+    const slot = document.createElement("div"); slot.className = "digit-slot";
+    const sw = document.createElement("div"); sw.className = "swatch"; sw.id = `sw-${n}`;
+    sw.innerHTML = `<span class="dnum">${n}</span>`;
+    const btns = document.createElement("div"); btns.className = "slot-btns";
+    const bDraw = document.createElement("button"); bDraw.textContent = "Draw"; bDraw.onclick = () => openDraw(n);
+    const bUp = document.createElement("button"); bUp.textContent = "Upload"; bUp.onclick = () => uploadImage(n);
+    const bClr = document.createElement("button"); bClr.textContent = "Clear"; bClr.onclick = () => { state.images[n]=null; imgCache[n]=null; save(); updateSwatch(n); renderPuzzle(); };
+    btns.append(bDraw, bUp, bClr);
+    slot.append(sw, btns);
+    grid.appendChild(slot);
+  }
+}
+function updateSwatch(n) {
+  const sw = document.getElementById(`sw-${n}`);
+  if (state.images[n]) {
+    sw.style.backgroundImage = `url(${state.images[n]})`;
+    sw.style.backgroundColor = (n===0) ? state.bg : greyForDigit(n);
+  } else {
+    sw.style.backgroundImage = "none";
+    sw.style.backgroundColor = (state.mode === "color") ? ARC_COLORS[n]
+      : (n===0 ? state.bg : greyForDigit(n));
+  }
+}
+function updateAllSwatches() { for (let n=0;n<10;n++) updateSwatch(n); }
+
+function uploadImage(n) {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "image/*";
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      state.images[n] = rd.result; save();
+      rebuildImageCache(() => { updateSwatch(n); renderPuzzle(); });
+    };
+    rd.readAsDataURL(f);
+  };
+  inp.click();
+}
+
+// ── Draw modal ──
+let drawN = null, drawing = false, eraser = false, lastX = 0, lastY = 0;
+const dcanvas = document.getElementById("draw-canvas");
+const dctx = dcanvas.getContext("2d");
+function openDraw(n) {
+  drawN = n; eraser = false;
+  document.getElementById("draw-eraser").classList.remove("active");
+  document.getElementById("draw-title").textContent = `Draw digit ${n}`;
+  dctx.globalCompositeOperation = "source-over";
+  dctx.clearRect(0,0,dcanvas.width,dcanvas.height);
+  if (state.images[n]) {
+    const img = new Image();
+    img.onload = () => dctx.drawImage(img, 0, 0, dcanvas.width, dcanvas.height);
+    img.src = state.images[n];
+  }
+  document.getElementById("draw-modal").classList.add("open");
+}
+function closeDraw() { document.getElementById("draw-modal").classList.remove("open"); drawN = null; }
+function drawPos(e) {
+  const r = dcanvas.getBoundingClientRect();
+  const cx = e.clientX - r.left;
+  const cy = e.clientY - r.top;
+  // map CSS pixels to the canvas' internal bitmap coordinates
+  return { x: cx * dcanvas.width / r.width, y: cy * dcanvas.height / r.height };
+}
+function applyBrush() {
+  const size = +document.getElementById("brush-size").value;
+  const shade = +document.getElementById("brush-shade").value;
+  dctx.lineJoin = dctx.lineCap = "round";
+  dctx.lineWidth = size;
+  if (eraser) {
+    dctx.globalCompositeOperation = "destination-out";
+    dctx.strokeStyle = dctx.fillStyle = "rgba(0,0,0,1)";
+  } else {
+    dctx.globalCompositeOperation = "source-over";
+    dctx.strokeStyle = dctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+  }
+  return size;
+}
+function startDraw(e) {
+  if (drawN === null) return;
+  e.preventDefault();
+  drawing = true;
+  const p = drawPos(e);
+  lastX = p.x; lastY = p.y;
+  const size = applyBrush();
+  // Draw an initial dot so a single tap/click leaves a mark.
+  dctx.beginPath();
+  dctx.arc(p.x, p.y, Math.max(size, 1) / 2, 0, Math.PI * 2);
+  dctx.fill();
+  if (dcanvas.setPointerCapture && e.pointerId != null) {
+    try { dcanvas.setPointerCapture(e.pointerId); } catch (err) {}
+  }
+}
+function moveDraw(e) {
+  if (!drawing) return;
+  e.preventDefault();
+  const p = drawPos(e);
+  applyBrush();
+  dctx.beginPath();
+  dctx.moveTo(lastX, lastY);
+  dctx.lineTo(p.x, p.y);
+  dctx.stroke();
+  lastX = p.x; lastY = p.y;
+}
+function endDraw() { drawing = false; }
+dcanvas.addEventListener("pointerdown", startDraw);
+dcanvas.addEventListener("pointermove", moveDraw);
+window.addEventListener("pointerup", endDraw);
+dcanvas.addEventListener("pointerleave", () => {});
+
+document.getElementById("draw-eraser").onclick = () => { eraser = !eraser; document.getElementById("draw-eraser").classList.toggle("active", eraser); };
+document.getElementById("draw-clear").onclick = () => dctx.clearRect(0,0,dcanvas.width,dcanvas.height);
+document.getElementById("draw-cancel").onclick = closeDraw;
+document.getElementById("draw-save").onclick = () => {
+  let src = dcanvas;
+  if (!document.getElementById("draw-transparent").checked) {
+    const tmp = document.createElement("canvas"); tmp.width = dcanvas.width; tmp.height = dcanvas.height;
+    const tc = tmp.getContext("2d"); tc.fillStyle = "#fff"; tc.fillRect(0,0,tmp.width,tmp.height); tc.drawImage(dcanvas,0,0);
+    src = tmp;
+  }
+  state.images[drawN] = src.toDataURL("image/png"); save();
+  const n = drawN; closeDraw();
+  rebuildImageCache(() => { updateSwatch(n); renderPuzzle(); });
+};
+document.getElementById("brush-shade").oninput = e => {
+  const v = e.target.value; document.getElementById("brush-preview").style.background = `rgb(${v},${v},${v})`;
+};
+document.getElementById("brush-size").oninput = e => document.getElementById("brush-size-v").textContent = e.target.value;
+
+// ── Wire up controls ──
+function setMode(mode) {
+  state.mode = mode; save();
+  document.querySelectorAll("#mode-seg button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+  const greyShown = mode !== "color";
+  document.getElementById("grey-controls").style.display = greyShown ? "block" : "none";
+  document.getElementById("grey-controls-label").style.display = greyShown ? "block" : "none";
+  updateAllSwatches(); renderPuzzle();
+}
+document.querySelectorAll("#mode-seg button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+document.querySelectorAll("#bg-seg button").forEach(b => b.onclick = () => {
+  state.bg = b.dataset.bg; save();
+  document.querySelectorAll("#bg-seg button").forEach(x => x.classList.toggle("active", x === b));
+  updateAllSwatches(); renderPuzzle();
+});
+
+function bindRange(id, key, fmt, after) {
+  const el = document.getElementById(id), out = document.getElementById(id + "-v");
+  el.oninput = () => {
+    state[key] = +el.value; save();
+    if (out) out.textContent = fmt ? fmt(el.value) : el.value;
+    if (after) after();
+    updateAllSwatches(); renderPuzzle();
+  };
+}
+bindRange("grey-min", "greyMin");
+bindRange("grey-max", "greyMax");
+bindRange("cell-size", "cellSize", v => v + "px");
+document.getElementById("grey-invert").onchange = e => { state.greyInvert = e.target.checked; save(); updateAllSwatches(); renderPuzzle(); };
+document.getElementById("show-labels").onchange = e => { state.showLabels = e.target.checked; save(); renderPuzzle(); };
+document.getElementById("show-grid").onchange = e => { state.showGrid = e.target.checked; save(); renderPuzzle(); };
+
+document.getElementById("clear-all").onclick = () => {
+  if (!confirm("Clear all 10 digit visuals?")) return;
+  state.images = Array(10).fill(null); imgCache.fill(null); save();
+  updateAllSwatches(); renderPuzzle();
+};
+
+document.getElementById("render-btn").onclick = () => {
+  clearError();
+  state.json = document.getElementById("json-input").value; save();
+  try { puzzleData = parsePuzzle(state.json); renderPuzzle(); }
+  catch (err) { puzzleData = null; showError("Parse error: " + err.message); renderPuzzle(); }
+};
+document.getElementById("json-file").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { document.getElementById("json-input").value = rd.result; document.getElementById("render-btn").click(); };
+  rd.readAsText(f);
+};
+document.getElementById("export-png").onclick = exportPNG;
+document.getElementById("show-solution-toggle").onclick = () => {
+  state.showSolution = !state.showSolution; save();
+  document.getElementById("sol-state").textContent = state.showSolution ? "on" : "off";
+  renderPuzzle();
+};
+
+const SAMPLE = {
+  metaphor: "Fish that see the fisherman don't take the bait.",
+  train: [
+    { input: [[0,0,0,0,0,5,7,0,0],[0,0,0,0,5,0,7,0,0],[0,0,0,5,0,0,0,0,0],[0,0,5,0,0,3,3,3,0],[0,2,0,0,0,0,0,0,0]],
+      output:[[0,0,0,0,0,5,7,0,0],[0,0,0,0,5,0,7,0,0],[0,0,0,5,0,0,0,0,0],[0,0,5,0,0,3,3,3,0],[0,1,0,0,0,0,0,0,0]] }
+  ],
+  test: [
+    { input: [[0,0,0,0,7,7,0,0],[0,0,0,5,0,0,0,0],[0,0,5,0,0,0,0,0],[0,2,0,0,0,3,3,0]],
+      output:[[0,0,0,0,7,7,0,0],[0,0,0,5,0,0,0,0],[0,0,5,0,0,0,0,0],[0,1,0,0,0,3,3,0]] }
+  ]
+};
+document.getElementById("load-sample").onclick = () => {
+  document.getElementById("json-input").value = JSON.stringify(SAMPLE, null, 2);
+  document.getElementById("render-btn").click();
+};
+
+// ── Theme toggle (shares localStorage "theme" with the main site) ──
+function applyTheme(t) {
+  if (t === "light") document.documentElement.dataset.theme = "light";
+  else delete document.documentElement.dataset.theme;
+  const moon = document.getElementById("icon-moon"), sun = document.getElementById("icon-sun");
+  if (moon && sun) { moon.style.display = t === "light" ? "none" : ""; sun.style.display = t === "light" ? "" : "none"; }
+  try { localStorage.setItem("theme", t); } catch (e) {}
+}
+document.getElementById("theme-toggle").onclick = () => {
+  const current = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  applyTheme(current === "light" ? "dark" : "light");
+};
+
+// ── Init ──
+function syncControlsFromState() {
+  document.getElementById("grey-min").value = state.greyMin;
+  document.getElementById("grey-min-v").textContent = state.greyMin;
+  document.getElementById("grey-max").value = state.greyMax;
+  document.getElementById("grey-max-v").textContent = state.greyMax;
+  document.getElementById("grey-invert").checked = state.greyInvert;
+  document.getElementById("cell-size").value = state.cellSize;
+  document.getElementById("cell-size-v").textContent = state.cellSize + "px";
+  document.getElementById("show-labels").checked = state.showLabels;
+  document.getElementById("show-grid").checked = state.showGrid;
+  document.getElementById("sol-state").textContent = state.showSolution ? "on" : "off";
+  document.querySelectorAll("#bg-seg button").forEach(b => b.classList.toggle("active", b.dataset.bg === state.bg));
+  if (state.json) document.getElementById("json-input").value = state.json;
+}
+
+load();
+applyTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
+buildDigitSlots();
+syncControlsFromState();
+setMode(state.mode);
+rebuildImageCache(() => {
+  updateAllSwatches();
+  if (state.json) { try { puzzleData = parsePuzzle(state.json); } catch(e){} }
+  renderPuzzle();
+});
+</script>
+</body>
+</html>

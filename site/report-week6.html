@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 6 — The Model Baseline Analysis Tool</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117; color: #e6edf3; padding: 24px 16px; line-height: 1.6;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back-link { display: inline-block; font-size: 0.82rem; color: #8b949e; margin-bottom: 18px; }
+    .back-link:hover { color: #e6edf3; }
+    .card {
+      background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+      padding: 22px 26px; margin-bottom: 20px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
+    h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 10px; color: #e6edf3; }
+    .meta-row { font-size: 0.8rem; color: #8b949e; display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+    .meta-row strong { color: #e6edf3; }
+    .tags { display: flex; gap: 6px; }
+    .tag { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px; background: rgba(56,139,253,0.15); color: #58a6ff; }
+    .sub { color: #c9d1d9; font-size: 0.95rem; }
+    p { margin-bottom: 0.8rem; }
+    p:last-child { margin-bottom: 0; }
+    code { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; font-size: 0.85em; font-family: "SF Mono", "Fira Code", monospace; }
+    .callout {
+      background: rgba(63,185,80,0.10); border-left: 3px solid #3fb950;
+      border-radius: 0 6px 6px 0; padding: 0.85rem 1.1rem; margin: 0.5rem 0 0.2rem;
+      font-size: 0.92rem; color: #e6edf3;
+    }
+    ul, ol { margin: 0.3rem 0 0.5rem 1.2rem; }
+    li { margin-bottom: 0.45rem; }
+    .measure {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      padding: 14px 18px; margin-bottom: 12px;
+    }
+    .measure h3 { font-size: 0.95rem; margin-bottom: 5px; color: #3fb950; }
+    .measure p { font-size: 0.9rem; margin: 0; color: #c9d1d9; }
+    .note { font-size: 0.82rem; color: #8b949e; }
+    .divider { border: none; border-top: 1px solid #30363d; margin: 4px 0 14px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="index.html">← Summer Project 2026</a>
+
+  <div class="card">
+    <h1>Week 6 — The Model Baseline Analysis Tool</h1>
+    <div class="meta-row">
+      <span><strong>Week 6</strong></span>
+      <span>July 14, 2026</span>
+      <span class="tags"><span class="tag">Progress</span><span class="tag">Research</span></span>
+    </div>
+    <p class="sub">Weeks 3–5 measured only whether a vision model can copy a puzzle back as data — that is
+      <em>perception</em>, not problem-solving. This week we built the instrument to separate the two: a single,
+      self-contained tool that measures, for any model, whether it can solve a puzzle blind, reconstruct it, and
+      solve it from its own reconstruction. No new research claim this week — the deliverable is the measuring
+      device and a clean baseline reference point for everything that follows.</p>
+  </div>
+
+  <div class="card">
+    <h2>In Plain Terms</h2>
+    <div class="callout">Everything up to now has asked one question: can an AI look at a picture of a colored-grid
+      puzzle and faithfully <em>copy it back</em> as data? That is about <strong>seeing</strong>. But these puzzles
+      are meant to be <em>solved</em> — you study a few before/after examples, infer the rule, and apply it to a new
+      grid. This week's tool measures three different things for any model: (1) can it <strong>solve the puzzle
+      cold</strong> straight from the image; (2) can it <strong>copy the puzzle back</strong> as data (what we've
+      measured before); and (3) if it copies the puzzle first and then solves from its own copy, does that help or
+      hurt? Lined up, those three give a clean baseline of what today's models can actually do — and a reusable
+      instrument for testing why.</div>
+  </div>
+
+  <div class="card">
+    <h2>Why Now</h2>
+    <p>Weeks 3–5 established one robust fact: current vision models read MARC puzzle <em>structure</em> perfectly but
+      read <em>colors</em> only partially (~50–80%), across model families. Every one of those numbers is a
+      <strong>perception</strong> score — how faithfully the model reconstructs what it sees. We had never measured
+      whether any model can <strong>solve</strong> a puzzle at all.</p>
+    <p>Before going further, we wanted to cleanly separate two things that reconstruction scoring tangles together:
+      can the model <em>see</em> the grid, and can it <em>reason</em> to the answer? A model could see perfectly and
+      still fail to solve, or mis-see yet still infer the rule. The only way to know is to measure solving and
+      perception independently, then measure what happens when you chain them.</p>
+  </div>
+
+  <div class="card">
+    <h2>The Three Measurements</h2>
+    <div class="measure">
+      <h3>1 · Blind solve</h3>
+      <p>Hand the model only the puzzle image (train pairs visible, test answer hidden) and ask it to produce the
+        test output grid directly. No reconstruction step. Scored against the known answer.</p>
+    </div>
+    <div class="measure">
+      <h3>2 · Reconstruction</h3>
+      <p>Ask the model to copy the visible puzzle back as JSON. Scored on cell fidelity over what it can actually
+        see (train grids + test input) — exactly the perception metric from prior weeks.</p>
+    </div>
+    <div class="measure">
+      <h3>3 · Reconstruct-then-solve</h3>
+      <p>A two-step chain: the model first reconstructs the image to JSON, then solves the puzzle <em>from its own
+        reconstructed JSON</em> (text only, no image). This exposes how perception errors propagate into solving.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>What We Built</h2>
+    <p>A single self-contained HTML page — the <strong>Model Baseline Analysis</strong> tool — that runs entirely in
+      the browser against MindRouter, with no server or build step. It renders the puzzle to an image client-side
+      (same ARC palette, legend, and hidden-test-output "?" as our Python pipeline), so the model sees exactly what
+      prior weeks fed it. Highlights:</p>
+    <ul>
+      <li><strong>Live model picker</strong> — the dropdown is populated from <code>GET /v1/models</code> on the
+        cluster, so you always choose from what's actually available; you can also type a custom id.</li>
+      <li><strong>Streaming requests</strong> — server-sent events with the per-model shaping settled on in Week 4
+        (thinking flag only for Qwen, JSON-object mode otherwise, no-retry on 404).</li>
+      <li><strong>Two-sided scoring</strong> — solving is graded by <em>exact match</em> (whole answer grid, the ARC
+        standard) <em>and</em> per-cell accuracy; reconstruction is graded on visible cells only (train grids + test
+        input), cleanly separating perception from solving.</li>
+      <li><strong>Visual diffs</strong> — the model's grids sit side-by-side with the truth, wrong cells outlined in
+        red, with reasoning traces and raw responses tucked into expandable panels.</li>
+      <li><strong>Portable logs</strong> — every run is saved in-browser and can be downloaded as a JSON log and
+        reloaded later to review, so results don't live only on one machine.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>How to Run It</h2>
+    <p class="note">The tool runs locally — it is not hosted on this site, because it calls the MindRouter cluster
+      through a local proxy and requires an API key.</p>
+    <hr class="divider" />
+    <ol>
+      <li><strong>Start the local proxy once</strong> — <code>uv run code/scripts/cors_proxy.py</code>. Browsers
+        can't call MindRouter directly (no CORS header), so this small stdlib proxy forwards requests and adds the
+        header; it also injects your key from <code>keys.txt</code>, so the API-key field can stay blank.</li>
+      <li>Open <code>code/tools/model-baseline-analysis.html</code> (locally, or serve <code>site/</code> with
+        <code>python3 -m http.server</code>) — the <strong>base URL</strong> defaults to the proxy at
+        <code>http://localhost:8811/v1</code> and is remembered in your browser.</li>
+      <li>Click <strong>Refresh models</strong> and pick a model; toggle <strong>thinking mode</strong> if you want
+        it (Qwen-only, off by default).</li>
+      <li>Choose a puzzle JSON file from <code>code/puzzles/</code>; the rendered image preview shows exactly what
+        the model will see.</li>
+      <li>Press <strong>Run all three</strong> — blind solve, reconstruct, and reconstruct-then-solve run in
+        sequence and the scored results appear as a card.</li>
+      <li><strong>Download the log</strong> to keep results, or <strong>Load</strong> a previous log to review past
+        runs — logs are portable JSON, so results don't live only on one machine.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Scope</h2>
+    <div class="callout">To be clear about what this is <em>not</em>: we are not yet starting the core MARC research
+      question (does the metaphor clue help models solve?). This week is about building the measuring instrument and
+      getting a definitive capability baseline — solve, reconstruct, and reconstruct-then-solve — so every later
+      experiment has a clean reference point.</div>
+    <p class="note" style="margin-top:0.8rem">Prior reports:
+      <a href="report-week5.html">Week 5</a> ·
+      <a href="report-week4-nothinking.html">Week 4 (no-think)</a> ·
+      <a href="report-week4-thinking.html">Week 4 (thinking)</a> ·
+      <a href="report-week3.html">Week 3</a>.</p>
+  </div>
+</div>
+</body>
+</html>

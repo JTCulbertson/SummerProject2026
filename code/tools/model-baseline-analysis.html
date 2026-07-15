@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Model Baseline Analysis — MARC</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0d1117; color: #e6edf3; padding: 24px 16px; line-height: 1.5;
+}
+a { color: #58a6ff; }
+.page-wrap { max-width: 1100px; margin: 0 auto; }
+
+.report-header { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 22px 26px; margin-bottom: 20px; }
+.report-header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+.report-header p.sub { font-size: 0.85rem; color: #8b949e; }
+.report-header .back { font-size: 0.8rem; margin-top: 10px; display: inline-block; }
+
+.panel { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
+.panel h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: 14px; color: #e6edf3; }
+.panel h2 .step { color: #3fb950; font-variant-numeric: tabular-nums; }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; margin-bottom: 5px; }
+.field input[type="text"], .field input[type="password"], .field input[type="url"] {
+  width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+  color: #e6edf3; padding: 8px 10px; font-size: 0.85rem; font-family: inherit;
+}
+.field input:focus { outline: none; border-color: #3fb950; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.row .field { flex: 1; min-width: 200px; }
+
+.check { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #e6edf3; }
+.check input { width: 16px; height: 16px; accent-color: #3fb950; }
+
+button {
+  background: #238636; border: 1px solid #2ea043; color: #fff; font-weight: 600;
+  font-size: 0.85rem; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-family: inherit;
+}
+button:hover { background: #2ea043; }
+button.secondary { background: #21262d; border-color: #30363d; color: #e6edf3; }
+button.secondary:hover { background: #30363d; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+
+.hint { font-size: 0.75rem; color: #8b949e; margin-top: 6px; }
+.err { color: #f85149; font-size: 0.8rem; margin-top: 8px; white-space: pre-wrap; }
+.ok  { color: #3fb950; font-size: 0.8rem; margin-top: 8px; }
+
+.preview-img { max-width: 100%; border: 1px solid #30363d; border-radius: 8px; margin-top: 12px; background: #fff; }
+
+.status-line { font-size: 0.82rem; color: #8b949e; margin-top: 10px; font-variant-numeric: tabular-nums; }
+.status-line .live { color: #d29922; }
+
+/* stat boxes */
+.stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 4px; }
+.stat-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 16px; text-align: center; min-width: 120px; flex: 1; }
+.stat-num { font-size: 1.35rem; font-weight: 700; color: #3fb950; }
+.stat-num.bad { color: #f85149; }
+.stat-num.warn { color: #d29922; }
+.stat-lbl { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; margin-top: 2px; }
+
+.callout { background: rgba(63,185,80,0.12); border-left: 3px solid #3fb950; border-radius: 0 6px 6px 0; padding: 0.7rem 1rem; margin: 0.5rem 0 1rem; font-size: 0.85rem; }
+
+/* run cards */
+.run-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
+.run-card .rc-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.run-card .rc-title { font-size: 1rem; font-weight: 700; }
+.run-card .rc-meta { font-size: 0.72rem; color: #8b949e; }
+.badge { font-size: 0.66rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #fff; vertical-align: middle; }
+.badge.solved { background: #238636; }
+.badge.failed { background: #b62324; }
+.badge.thinking { background: #6e40c9; }
+.badge.nothink { background: #30363d; }
+
+details { margin-top: 10px; border: 1px solid #30363d; border-radius: 6px; }
+details > summary { cursor: pointer; padding: 8px 12px; font-size: 0.82rem; font-weight: 600; color: #c9d1d9; list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: "▸ "; color: #8b949e; }
+details[open] > summary::before { content: "▾ "; }
+details .details-body { padding: 6px 14px 14px; }
+
+pre.raw { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px; font-size: 0.72rem; color: #8b949e; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 8px 0; }
+
+.grid-wrap { display: inline-flex; flex-direction: column; margin: 4px 8px 4px 0; vertical-align: top; }
+.grid-label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e; margin-bottom: 3px; }
+.grid-empty { color: #6e7681; font-size: 0.75rem; padding: 4px; }
+.pair-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; }
+.pair-who { font-size: 0.66rem; text-transform: uppercase; color: #8b949e; width: 56px; }
+.arrow { font-size: 1.2rem; color: #8b949e; }
+
+table.grid { border-collapse: collapse; border: 1px solid #30363d; }
+table.grid td { text-align: center; font-size: 9px; font-weight: 600; }
+
+h3.exp-h { font-size: 0.9rem; font-weight: 700; margin: 14px 0 4px; color: #e6edf3; }
+h3.exp-h .sub { font-weight: 400; font-size: 0.75rem; color: #8b949e; }
+
+.empty-note { color: #8b949e; font-size: 0.85rem; padding: 8px 0; }
+.section-links { font-size: 0.8rem; color: #8b949e; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <header class="report-header">
+    <h1>Model Baseline Analysis</h1>
+    <p class="sub">Measure a vision model's MARC-puzzle capability three ways — <strong>blind solve</strong>, <strong>reconstruct</strong>, and <strong>reconstruct-then-solve</strong> — score each against ground truth, and log the results.</p>
+    <a class="back" href="index.html">← Back to Update Log</a>
+  </header>
+
+  <!-- 1. Configuration -->
+  <div class="panel">
+    <h2><span class="step">1.</span> MindRouter Connection</h2>
+    <div class="row">
+      <div class="field">
+        <label>Base URL (OpenAI-compatible)</label>
+        <input type="text" id="baseUrl" placeholder="http://localhost:8811/v1" />
+      </div>
+      <div class="field" style="flex:1.3">
+        <label>API Key (Bearer)</label>
+        <input type="password" id="apiKey" placeholder="mr2_..." />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Model</label>
+        <input type="text" id="model" list="modelList" placeholder="pick or type a model id" />
+        <datalist id="modelList"></datalist>
+      </div>
+      <div class="field" style="flex:0 0 auto; min-width:auto; display:flex; align-items:flex-end;">
+        <button class="secondary" id="refreshModels" type="button">↻ Refresh models</button>
+      </div>
+    </div>
+    <label class="check"><input type="checkbox" id="thinking" /> Enable thinking mode <span style="color:#8b949e">(sent only to Qwen-family models; slower, can run away on dense grids)</span></label>
+    <div class="callout" style="margin-top:14px">
+      <strong>First time?</strong> Browsers can't call MindRouter directly (it sends no CORS header, so <code>fetch</code> fails with a “NetworkError”). Start the bundled local proxy once, in a terminal:
+      <div style="margin:8px 0"><code>uv run code/scripts/cors_proxy.py</code></div>
+      then keep the Base URL as <code>http://localhost:8811/v1</code>. The proxy injects your key from <code>keys.txt</code>, so you can leave the <strong>API Key</strong> field blank. Open this page locally (or via <code>python3 -m http.server</code> in <code>site/</code>).
+    </div>
+    <div id="modelStatus" class="hint">Config is saved in your browser. The dropdown is populated live from <code>GET {base}/models</code>.</div>
+  </div>
+
+  <!-- 2. Puzzle -->
+  <div class="panel">
+    <h2><span class="step">2.</span> Puzzle</h2>
+    <div class="field">
+      <label>Puzzle JSON file (from <code>code/puzzles/</code>)</label>
+      <input type="file" id="puzzleFile" accept=".json,application/json" />
+    </div>
+    <div id="puzzleInfo" class="hint">The puzzle is rendered to an image in-browser (ARC palette + legend, test output hidden as “?”) — exactly what the model sees. The file also supplies the ground-truth answer used for scoring.</div>
+    <div id="puzzlePreview"></div>
+  </div>
+
+  <!-- 3. Run -->
+  <div class="panel">
+    <h2><span class="step">3.</span> Run the Three Experiments</h2>
+    <div class="callout">
+      <strong>1 · Blind solve</strong> — image → test output grid, no reconstruction.<br/>
+      <strong>2 · Reconstruct</strong> — image → JSON, scored on visible cells (train grids + test input).<br/>
+      <strong>3 · Reconstruct-then-solve</strong> — reuse the reconstruction, then solve from that JSON (text only).
+    </div>
+    <div class="btn-row">
+      <button id="runBtn" type="button" disabled>▶ Run all three</button>
+      <span id="runStatus" class="status-line"></span>
+    </div>
+    <div id="runError" class="err"></div>
+  </div>
+
+  <!-- 4. Results -->
+  <div class="panel">
+    <h2><span class="step">4.</span> Results &amp; Log</h2>
+    <div class="btn-row">
+      <button class="secondary" id="downloadLog" type="button">⬇ Download log</button>
+      <button class="secondary" id="loadLogBtn" type="button">⬆ Load log</button>
+      <input type="file" id="loadLogFile" accept=".json,application/json" style="display:none" />
+      <button class="secondary" id="clearLog" type="button">🗑 Clear</button>
+      <span id="logStatus" class="hint" style="margin:0"></span>
+    </div>
+    <div id="results"></div>
+  </div>
+
+</div>
+
+<canvas id="renderCanvas" style="display:none"></canvas>
+
+<script>
+"use strict";
+
+// ─────────────────────────────────────────────────────────────────────────
+// Constants (mirrors code/scripts/utils/generate_images.py & recover_puzzle.py)
+// ─────────────────────────────────────────────────────────────────────────
+const ARC_COLORS = [
+  "#000000", "#0074D9", "#FF4136", "#2ECC40", "#FFDC00",
+  "#AAAAAA", "#F012BE", "#FF851B", "#ADD8E6", "#870C25",
+];
+const ARC_COLOR_NAMES = [
+  "black", "blue", "red", "green", "yellow",
+  "gray", "magenta", "orange", "lt.blue", "maroon",
+];
+
+const RECOVER_PROMPT = `You are looking at an ARC-style puzzle rendered as an image.
+The image shows training examples (each as an input grid and an output grid) and at least one test input grid.
+There may also be a "Metaphor" title displayed above the puzzle.
+
+Reconstruct the original JSON representation of this puzzle exactly.
+Grids are 2D arrays of integers 0-9.
+
+Respond with ONLY a JSON object in this exact format — no markdown, no explanation:
+{
+  "metaphor": "<title string, or empty string if none>",
+  "train": [{"input": [[...], ...], "output": [[...], ...]}, ...],
+  "test":  [{"input": [[...], ...]}]
+}`;
+
+const SOLVE_PROMPT_IMAGE = `You are looking at an ARC-style puzzle rendered as an image.
+The image shows one or more training examples — each a pair of an input grid and its output grid — followed by a test input grid whose output is hidden (shown as "?").
+A "Metaphor" title may appear above the puzzle as a hint.
+
+Study how each training input is transformed into its output, infer the single rule, then apply it to the test input to produce the test OUTPUT grid.
+Grids are 2D arrays of integers 0-9 (each integer is a color).
+
+Respond with ONLY a JSON object in this exact format — no markdown, no explanation:
+{"output": [[...], ...]}`;
+
+function solvePromptText(puzzleJsonStr) {
+  return `Here is an ARC-style puzzle as JSON. It has one or more training pairs (each an input grid and its output grid) and a test input whose output you must produce.
+
+${puzzleJsonStr}
+
+Study how each training input becomes its output, infer the single rule, then apply it to the test input.
+Grids are 2D arrays of integers 0-9.
+
+Respond with ONLY a JSON object in this exact format — no markdown, no explanation:
+{"output": [[...], ...]}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Small DOM helpers & config persistence
+// ─────────────────────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const LS = {
+  base: "mba_baseUrl", key: "mba_apiKey", model: "mba_model",
+  thinking: "mba_thinking", runs: "mba_runs", models: "mba_models",
+};
+
+const DEFAULT_BASE = "http://localhost:8811/v1";
+function loadConfig() {
+  let saved = localStorage.getItem(LS.base);
+  // Browsers can't call mindrouter.uidaho.edu directly (no CORS header). Use the
+  // local proxy (code/scripts/cors_proxy.py). Migrate stale/unworkable saved values.
+  if (!saved || /localhost:8000/.test(saved) || /mindrouter\.uidaho\.edu/.test(saved)) saved = DEFAULT_BASE;
+  $("baseUrl").value = saved;
+  $("apiKey").value  = localStorage.getItem(LS.key)  || "";
+  $("model").value   = localStorage.getItem(LS.model) || "";
+  $("thinking").checked = localStorage.getItem(LS.thinking) === "1";
+}
+function bindConfigPersistence() {
+  $("baseUrl").addEventListener("change", e => localStorage.setItem(LS.base, e.target.value.trim()));
+  $("apiKey").addEventListener("change",  e => localStorage.setItem(LS.key, e.target.value.trim()));
+  $("model").addEventListener("change",   e => localStorage.setItem(LS.model, e.target.value.trim()));
+  $("thinking").addEventListener("change", e => localStorage.setItem(LS.thinking, e.target.checked ? "1" : "0"));
+}
+const baseUrl = () => $("baseUrl").value.trim().replace(/\/+$/, "");
+const apiKey  = () => $("apiKey").value.trim();
+const modelId = () => $("model").value.trim();
+const supportsThinking = (m) => /qwen/i.test(m || "");
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// ─────────────────────────────────────────────────────────────────────────
+// Model list
+// ─────────────────────────────────────────────────────────────────────────
+// SEED_MODELS: a baked-in snapshot so the dropdown is populated without the proxy
+// running. Availability changes rarely — regenerate with:
+//   uv run code/scripts/update_tool_models.py
+const SEED_MODELS = ["Nemotron-3-Super-120b", "Qwen/Qwen3-32B", "Qwen/Qwen3-Embedding-8B", "Qwen/Qwen3-Reranker-8B", "aya-expanse:32b", "aya-expanse:8b", "aya:35b", "aya:8b", "black-forest-labs/FLUX.2-klein-9B", "codeqwen:7b", "codestral:22b", "command-a:111b", "command-r-plus:104b", "command-r:35b", "default-embedding", "default-llm", "default-llm-large", "default-llm-small", "default-ocr", "default-reranker", "default-vision", "dots.MOCR", "dots.OCR", "gemma3:12b", "gemma3:1b", "gemma3:4b", "google/gemma-4-26b", "google/gemma-4-31b", "granite-code:8b", "granite3-dense:8b", "granite3-moe:3b", "leanstral:119b", "llama3.1:8b", "llama3.2-vision:11b", "llama3.2-vision:90b", "llama3.2:1b", "llama3.2:3b", "llama3.3:70b", "llava-llama3:8b", "llava:13b", "llava:34b", "llava:7b", "magistral:24b", "marco-o1:7b", "microsoft/phi-4", "mistral-large:123b", "mistral-nemo:12b", "mistral-small:22b", "mistral:7b", "mixtral:8x22b", "mixtral:8x7b", "nemotron-mini:4b", "nemotron:70b", "olmo2:13b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "phi3.5:3.8b", "phi3:14b", "phi3:3.8b", "phi4-reasoning:14b", "qwen/qwen3.5-122b", "qwen/qwen3.5-35b", "qwen/qwen3.6-27b", "qwen/qwen3.6-35b", "qwen2.5-coder:14b", "qwen2.5-coder:32b", "qwen2.5-coder:7b", "qwen2.5:0.5b", "qwen2.5:1.5b", "qwen2.5:14b", "qwen2.5:32b", "qwen2.5:3b", "qwen2.5:72b", "qwen2.5:7b", "qwen3-coder:30b", "qwen3-vl:32b", "qwq:32b"];
+
+function getCachedModels() {
+  try { const a = JSON.parse(localStorage.getItem(LS.models) || "[]"); return Array.isArray(a) ? a : []; }
+  catch { return []; }
+}
+function populateModels(ids) {
+  const merged = Array.from(new Set(ids || [])).sort();
+  $("modelList").innerHTML = merged.map(id => `<option value="${escapeAttr(id)}"></option>`).join("");
+  return merged.length;
+}
+// On load: prefer a previously-fetched cached list, else the baked-in seed. No proxy needed.
+function initModels() {
+  const cached = getCachedModels();
+  const n = populateModels(cached.length ? cached : SEED_MODELS);
+  $("modelStatus").innerHTML = `Dropdown shows ${n} ${cached.length ? "saved" : "built-in"} models — no proxy needed to browse. Press <strong>Refresh models</strong> (with the proxy running) to update.`;
+}
+
+async function refreshModels() {
+  const st = $("modelStatus");
+  if (!baseUrl()) { st.innerHTML = '<span style="color:#f85149">Set a base URL first.</span>'; return; }
+  st.textContent = "Fetching models…";
+  try {
+    const resp = await fetch(baseUrl() + "/models", {
+      headers: apiKey() ? { "Authorization": "Bearer " + apiKey() } : {},
+    });
+    if (!resp.ok) throw new Error("HTTP " + resp.status + " — " + (await resp.text()).slice(0, 200));
+    const data = await resp.json();
+    const ids = (data.data || data.models || []).map(m => m.id || m.name).filter(Boolean).sort();
+    localStorage.setItem(LS.models, JSON.stringify(ids));  // remember across sessions
+    populateModels(ids);
+    st.innerHTML = `<span class="ok">Loaded and saved ${ids.length} models.</span> This browser will remember them — the proxy is only needed to refresh again, or to run.`;
+  } catch (e) {
+    st.innerHTML = `<span style="color:#f85149">Could not list models: ${escapeHtml(String(e.message || e))}</span>\nStart the proxy first: <code>uv run code/scripts/cors_proxy.py</code>. The dropdown still shows the built-in list, and you can type any model id.`;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Puzzle loading + canvas rendering (mirrors generate_images.py layout)
+// ─────────────────────────────────────────────────────────────────────────
+let currentPuzzle = null;      // parsed puzzle object
+let currentImageDataUrl = null; // data:image/png;base64,...
+
+function validatePuzzle(p) {
+  if (!p || typeof p !== "object") return "not a JSON object";
+  if (!Array.isArray(p.train)) return "missing 'train' array";
+  if (!Array.isArray(p.test) || p.test.length === 0) return "missing 'test' array";
+  if (!Array.isArray(p.test[0].input)) return "test[0].input is not a grid";
+  if (!Array.isArray(p.test[0].output)) return "test[0].output missing — needed as ground truth to score solving";
+  return null;
+}
+
+function renderPuzzleToDataUrl(puzzle) {
+  const pairs = [];
+  (puzzle.train || []).forEach((p, i) => pairs.push({ pair: p, label: `Train ${i + 1}`, hideOut: false }));
+  (puzzle.test  || []).forEach((p, i) => pairs.push({ pair: p, label: `Test ${i + 1}`,  hideOut: true  }));
+
+  // choose a cell size so the widest grid stays reasonable
+  let maxDim = 1;
+  pairs.forEach(({ pair, hideOut }) => {
+    for (const g of [pair.input, hideOut ? null : pair.output]) {
+      if (Array.isArray(g) && g.length) maxDim = Math.max(maxDim, g.length, g[0].length || 0);
+    }
+  });
+  const CELL = Math.max(7, Math.min(22, Math.floor(560 / maxDim)));
+  const GAP = 40, PAD = 24, TITLE_H = 20, ROW_GAP = 26;
+  const metaphorH = puzzle.metaphor ? 34 : 6;
+
+  const gridW = (g) => (Array.isArray(g) && g[0] ? g[0].length : 3) * CELL;
+  const gridH = (g) => (Array.isArray(g) ? g.length : 3) * CELL;
+
+  // measure rows
+  const rows = pairs.map(({ pair, hideOut }) => {
+    const inW = gridW(pair.input), inH = gridH(pair.input);
+    const out = hideOut ? null : pair.output;
+    const outW = out ? gridW(out) : CELL * 3, outH = out ? gridH(out) : CELL * 3;
+    return { inW, inH, outW, outH, w: inW + GAP + outW, h: Math.max(inH, outH) + TITLE_H };
+  });
+  const contentW = Math.max(300, ...rows.map(r => r.w));
+  const canvasW = contentW + PAD * 2;
+  let y = PAD + metaphorH;
+  const rowY = rows.map(r => { const top = y; y += r.h + ROW_GAP; return top; });
+  const legendH = 46;
+  const canvasH = y + legendH + PAD;
+
+  const cv = $("renderCanvas");
+  const scale = window.devicePixelRatio > 1 ? 2 : 1;
+  cv.width = canvasW * scale; cv.height = canvasH * scale;
+  const ctx = cv.getContext("2d");
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvasW, canvasH);
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+
+  if (puzzle.metaphor) {
+    ctx.fillStyle = "#111111";
+    ctx.font = "bold 15px -apple-system, Segoe UI, sans-serif";
+    ctx.fillText("Metaphor: " + puzzle.metaphor, canvasW / 2, PAD + 12, canvasW - PAD * 2);
+  }
+
+  const drawGrid = (g, x, top, placeholder) => {
+    if (!Array.isArray(g) || !g.length) {
+      // placeholder "?" box
+      const w = CELL * 3, h = CELL * 3;
+      ctx.strokeStyle = "#cccccc"; ctx.strokeRect(x, top, w, h);
+      ctx.fillStyle = "#333333"; ctx.font = "bold 30px sans-serif";
+      ctx.fillText(placeholder || "", x + w / 2, top + h / 2);
+      return { w, h };
+    }
+    const rowsN = g.length, colsN = g[0].length;
+    for (let r = 0; r < rowsN; r++) {
+      for (let c = 0; c < colsN; c++) {
+        const v = Math.max(0, Math.min(9, parseInt(g[r][c], 10) || 0));
+        ctx.fillStyle = ARC_COLORS[v];
+        ctx.fillRect(x + c * CELL, top + r * CELL, CELL, CELL);
+      }
+    }
+    // white gridlines
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1;
+    for (let r = 0; r <= rowsN; r++) { ctx.beginPath(); ctx.moveTo(x, top + r * CELL); ctx.lineTo(x + colsN * CELL, top + r * CELL); ctx.stroke(); }
+    for (let c = 0; c <= colsN; c++) { ctx.beginPath(); ctx.moveTo(x + c * CELL, top); ctx.lineTo(x + c * CELL, top + rowsN * CELL); ctx.stroke(); }
+    return { w: colsN * CELL, h: rowsN * CELL };
+  };
+
+  pairs.forEach(({ pair, label, hideOut }, i) => {
+    const r = rows[i], top = rowY[i];
+    const x0 = PAD + (contentW - r.w) / 2; // center the row
+    ctx.fillStyle = "#333333"; ctx.font = "11px -apple-system, Segoe UI, sans-serif";
+    ctx.fillText(label + " Input", x0 + r.inW / 2, top + 9);
+    drawGrid(pair.input, x0, top + TITLE_H, null);
+    // arrow
+    ctx.fillStyle = "#333333"; ctx.font = "26px sans-serif";
+    ctx.fillText("→", x0 + r.inW + GAP / 2, top + TITLE_H + Math.max(r.inH, r.outH) / 2);
+    const outX = x0 + r.inW + GAP;
+    if (hideOut) {
+      ctx.fillStyle = "#333333"; ctx.font = "11px -apple-system, Segoe UI, sans-serif";
+      ctx.fillText(label + " Output", outX + r.outW / 2, top + 9);
+      drawGrid(null, outX, top + TITLE_H, "?");
+    } else {
+      ctx.fillStyle = "#333333"; ctx.font = "11px -apple-system, Segoe UI, sans-serif";
+      ctx.fillText(label + " Output", outX + r.outW / 2, top + 9);
+      drawGrid(pair.output, outX, top + TITLE_H, null);
+    }
+  });
+
+  // legend
+  const legTop = canvasH - PAD - legendH + 10;
+  const swW = Math.min(64, (contentW) / 10);
+  const legX0 = PAD + (contentW - swW * 10) / 2;
+  for (let i = 0; i < 10; i++) {
+    const sx = legX0 + i * swW;
+    ctx.fillStyle = ARC_COLORS[i];
+    ctx.fillRect(sx + 2, legTop, swW - 6, 18);
+    ctx.strokeStyle = "#888888"; ctx.lineWidth = 0.5; ctx.strokeRect(sx + 2, legTop, swW - 6, 18);
+    ctx.fillStyle = (i === 4 || i === 8) ? "#333333" : "#ffffff";
+    ctx.font = "bold 10px sans-serif";
+    ctx.fillText(String(i), sx + swW / 2 - 1, legTop + 9);
+    ctx.fillStyle = "#333333"; ctx.font = "8px sans-serif";
+    ctx.fillText(ARC_COLOR_NAMES[i], sx + swW / 2 - 1, legTop + 28);
+  }
+
+  return cv.toDataURL("image/png");
+}
+
+function onPuzzleFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const info = $("puzzleInfo"), prev = $("puzzlePreview");
+    try {
+      const p = JSON.parse(reader.result);
+      const err = validatePuzzle(p);
+      if (err) { info.innerHTML = `<span style="color:#f85149">Invalid puzzle: ${escapeHtml(err)}</span>`; prev.innerHTML = ""; setRunEnabled(); return; }
+      currentPuzzle = p;
+      currentPuzzle._name = file.name.replace(/\.json$/i, "");
+      currentImageDataUrl = renderPuzzleToDataUrl(p);
+      const nTrain = (p.train || []).length, nTest = (p.test || []).length;
+      info.innerHTML = `<span class="ok">Loaded “${escapeHtml(currentPuzzle._name)}”</span> — ${nTrain} train pair(s), ${nTest} test pair(s). Metaphor: <em>${escapeHtml(p.metaphor || "(none)")}</em>`;
+      prev.innerHTML = `<img class="preview-img" src="${currentImageDataUrl}" alt="rendered puzzle" />`;
+    } catch (e) {
+      info.innerHTML = `<span style="color:#f85149">Could not parse JSON: ${escapeHtml(String(e.message || e))}</span>`;
+      prev.innerHTML = ""; currentPuzzle = null; currentImageDataUrl = null;
+    }
+    setRunEnabled();
+  };
+  reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// MindRouter streaming client
+// ─────────────────────────────────────────────────────────────────────────
+async function callMindRouter({ model, messages, thinking, jsonMode, maxTokens, onProgress }) {
+  model = model || modelId();
+  const payload = {
+    model, messages,
+    temperature: 0,
+    stream: true,
+    max_completion_tokens: maxTokens,
+  };
+  if (supportsThinking(model)) payload.chat_template_kwargs = { enable_thinking: !!thinking };
+  if (!thinking && jsonMode) payload.response_format = { type: "json_object" };
+
+  const resp = await fetch(baseUrl() + "/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "text/event-stream",
+      ...(apiKey() ? { "Authorization": "Bearer " + apiKey() } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (resp.status === 404) throw new Error("HTTP 404 — no healthy backend currently serves this model (circuit breaker). Not retried.");
+  if (!resp.ok) throw new Error("HTTP " + resp.status + " — " + (await resp.text()).slice(0, 500));
+
+  // Stream SSE; accumulate content + reasoning. Fall back to plain JSON body.
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "", content = "", reasoning = "", sawSSE = false;
+
+  const handleData = (data) => {
+    if (data === "[DONE]") return;
+    let chunk; try { chunk = JSON.parse(data); } catch { return; }
+    const ch = (chunk.choices || [])[0]; if (!ch) return;
+    const delta = ch.delta || {};
+    if (delta.content) content += delta.content;
+    const rp = delta.reasoning_content || delta.thinking;
+    if (rp) reasoning += rp;
+    if (onProgress) onProgress(content.length + reasoning.length);
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith("data:")) continue;
+      sawSSE = true;
+      handleData(t.slice(5).trim());
+    }
+  }
+  if (buffer.trim().startsWith("data:")) { sawSSE = true; handleData(buffer.trim().slice(5).trim()); }
+
+  if (!sawSSE) {
+    // Not an SSE stream — treat accumulated buffer as a JSON completion body.
+    try {
+      const j = JSON.parse(buffer || "{}");
+      const msg = ((j.choices || [])[0] || {}).message || {};
+      content = msg.content || "";
+      reasoning = msg.reasoning_content || "";
+    } catch { /* leave content empty */ }
+  }
+
+  // Some models don't use a separate reasoning channel — they inline the thinking
+  // as <think>…</think> in the content. Pull it out so it shows in the log and
+  // doesn't confuse JSON parsing of the answer.
+  if (!reasoning) {
+    const m = content.match(/<think>([\s\S]*?)<\/think>/i);
+    if (m) { reasoning = m[1].trim(); content = content.replace(m[0], "").trim(); }
+  }
+  return { content, reasoning };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Scoring (ports code/scripts/make_report.py logic)
+// ─────────────────────────────────────────────────────────────────────────
+const toInt = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0; };
+function gridToInt(g) {
+  if (!Array.isArray(g)) return [];
+  return g.filter(r => Array.isArray(r)).map(r => r.map(toInt));
+}
+function diffMask(model, truth) {
+  return truth.map((row, r) => row.map((cv, c) => {
+    const mv = (model[r] && model[r][c] !== undefined) ? model[r][c] : -1;
+    return mv !== cv;
+  }));
+}
+function cellAccuracy(model, truth) {
+  const mg = gridToInt(model), tg = gridToInt(truth);
+  let errors = 0, cells = 0;
+  for (let r = 0; r < tg.length; r++) {
+    for (let c = 0; c < tg[r].length; c++) {
+      cells++;
+      const mv = (mg[r] && mg[r][c] !== undefined) ? mg[r][c] : -1;
+      if (mv !== tg[r][c]) errors++;
+    }
+  }
+  return { errors, cells, pct: cells ? 100 * (cells - errors) / cells : 0 };
+}
+function exactMatch(model, truth) {
+  const mg = gridToInt(model), tg = gridToInt(truth);
+  if (mg.length !== tg.length) return false;
+  for (let r = 0; r < tg.length; r++) {
+    if (!mg[r] || mg[r].length !== tg[r].length) return false;
+    for (let c = 0; c < tg[r].length; c++) if (mg[r][c] !== tg[r][c]) return false;
+  }
+  return true;
+}
+// Reconstruction accuracy over VISIBLE cells only: train input+output + test input.
+function reconstructionAccuracy(modelObj, truth) {
+  let errors = 0, cells = 0;
+  const acc = (m, t) => { const a = cellAccuracy(m, t); errors += a.errors; cells += a.cells; };
+  const mTrain = (modelObj && modelObj.train) || [], tTrain = truth.train || [];
+  tTrain.forEach((tp, i) => {
+    const mp = mTrain[i] || {};
+    acc(mp.input, tp.input);
+    acc(mp.output, tp.output);
+  });
+  const mTest = (modelObj && modelObj.test) || [], tTest = truth.test || [];
+  tTest.forEach((tp, i) => { acc((mTest[i] || {}).input, tp.input); }); // input only (output hidden)
+  return { errors, cells, pct: cells ? 100 * (cells - errors) / cells : 0 };
+}
+
+// Lenient JSON extraction from model text.
+function parseJsonLenient(text) {
+  if (!text) return null;
+  let s = text.trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) s = fence[1].trim();
+  try { return JSON.parse(s); } catch {}
+  const start = s.indexOf("{"), end = s.lastIndexOf("}");
+  if (start !== -1 && end > start) { try { return JSON.parse(s.slice(start, end + 1)); } catch {} }
+  const as = s.indexOf("["), ae = s.lastIndexOf("]");
+  if (as !== -1 && ae > as) { try { return JSON.parse(s.slice(as, ae + 1)); } catch {} }
+  return null;
+}
+// Pull a predicted output grid out of whatever shape the model returned.
+function extractOutputGrid(parsed) {
+  if (!parsed) return null;
+  if (Array.isArray(parsed)) return parsed;                       // bare grid
+  if (Array.isArray(parsed.output)) return parsed.output;         // {output:[[...]]}
+  if (Array.isArray(parsed.test) && parsed.test[0] && Array.isArray(parsed.test[0].output)) return parsed.test[0].output;
+  if (parsed.answer && Array.isArray(parsed.answer)) return parsed.answer;
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Run orchestration
+// ─────────────────────────────────────────────────────────────────────────
+let runs = [];
+const PACE_MS = 3000;
+
+function setRunEnabled() {
+  $("runBtn").disabled = busy || !(currentPuzzle && currentImageDataUrl && baseUrl() && modelId());
+}
+
+let busy = false;
+
+// Core runner. ctx = { image, truth:{train,test}, puzzleName, metaphor, model, thinking }.
+// Used by both a fresh run (from the loaded puzzle) and a retry (from a stored run).
+async function runExperiments(ctx) {
+  if (busy) return;
+  busy = true;
+  $("runError").textContent = "";
+  const { image, truth, puzzleName, metaphor, model, thinking } = ctx;
+  const maxTokens = thinking ? 32768 : 8192;
+  const truthOut = gridToInt(truth.test[0].output);
+  const imageContent = [
+    { type: "text", text: SOLVE_PROMPT_IMAGE },
+    { type: "image_url", image_url: { url: image } },
+  ];
+  const setStatus = (html) => { $("runStatus").innerHTML = html; };
+  const prog = (label) => (n) => setStatus(`${label} <span class="live">streaming… ${n.toLocaleString()} chars</span>`);
+
+  $("runBtn").disabled = true;
+  const record = {
+    timestamp: new Date().toISOString(),
+    model, baseUrl: baseUrl(), thinking,
+    puzzleName: puzzleName || "puzzle", metaphor: metaphor || "",
+    image, truth: { train: truth.train, test: truth.test },
+    experiments: {},
+  };
+
+  try {
+    // ── Exp 1: blind solve ──────────────────────────────────────────────
+    setStatus("Exp 1 · blind solve — sending…");
+    let r1 = await callMindRouter({ model, messages: [{ role: "user", content: imageContent }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 1 · blind solve") });
+    const p1 = parseJsonLenient(r1.content), out1 = extractOutputGrid(p1);
+    record.experiments.blindSolve = {
+      prompt: SOLVE_PROMPT_IMAGE, raw: r1.content, reasoning: r1.reasoning,
+      predicted: out1, parsed: !!out1,
+      solved: out1 ? exactMatch(out1, truthOut) : false,
+      cell: out1 ? cellAccuracy(out1, truthOut) : { errors: truthOut.length, cells: countCells(truthOut), pct: 0 },
+    };
+
+    await sleep(PACE_MS);
+
+    // ── Exp 2: reconstruct ──────────────────────────────────────────────
+    setStatus("Exp 2 · reconstruct — sending…");
+    const reconContent = [
+      { type: "text", text: RECOVER_PROMPT },
+      { type: "image_url", image_url: { url: image } },
+    ];
+    let r2 = await callMindRouter({ model, messages: [{ role: "user", content: reconContent }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 2 · reconstruct") });
+    const p2 = parseJsonLenient(r2.content);
+    record.experiments.reconstruct = {
+      prompt: RECOVER_PROMPT, raw: r2.content, reasoning: r2.reasoning,
+      parsed: !!p2, model_output: p2,
+      recon: p2 ? reconstructionAccuracy(p2, truth) : { errors: 0, cells: 0, pct: 0 },
+    };
+
+    await sleep(PACE_MS);
+
+    // ── Exp 3: reconstruct-then-solve (text-only, from Exp 2's JSON) ─────
+    if (p2) {
+      // strip any test output the model may have hallucinated, keep it honest
+      const forSolve = { metaphor: p2.metaphor, train: p2.train, test: (p2.test || []).map(t => ({ input: t.input })) };
+      const jsonStr = JSON.stringify(forSolve);
+      setStatus("Exp 3 · reconstruct-then-solve — sending…");
+      let r3 = await callMindRouter({ model, messages: [{ role: "user", content: solvePromptText(jsonStr) }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 3 · reconstruct-then-solve") });
+      const p3 = parseJsonLenient(r3.content), out3 = extractOutputGrid(p3);
+      record.experiments.reconSolve = {
+        prompt: "(text) solve from reconstructed JSON", solvedFromJson: jsonStr,
+        raw: r3.content, reasoning: r3.reasoning, predicted: out3, parsed: !!out3,
+        solved: out3 ? exactMatch(out3, truthOut) : false,
+        cell: out3 ? cellAccuracy(out3, truthOut) : { errors: truthOut.length, cells: countCells(truthOut), pct: 0 },
+        skipped: false,
+      };
+    } else {
+      record.experiments.reconSolve = { skipped: true, reason: "reconstruction produced no parseable JSON" };
+    }
+
+    setStatus('<span class="ok">Done.</span>');
+    runs.unshift(record);
+    saveRuns();
+    renderResults();
+  } catch (e) {
+    $("runError").textContent = "Run failed: " + (e.message || e);
+    setStatus("");
+  } finally {
+    busy = false;
+    setRunEnabled();
+  }
+}
+
+function runAll() {
+  if (!currentPuzzle || !currentImageDataUrl) return;
+  return runExperiments({
+    image: currentImageDataUrl,
+    truth: currentPuzzle,
+    puzzleName: currentPuzzle._name || "puzzle",
+    metaphor: currentPuzzle.metaphor || "",
+    model: modelId(),
+    thinking: $("thinking").checked,
+  });
+}
+
+// Re-run a stored run with its own image + model + thinking (uses current connection).
+function retryRun(i) {
+  const rec = runs[i];
+  if (!rec) return;
+  if (busy) return;
+  if (!rec.image || !rec.truth || !(rec.truth.test && rec.truth.test[0])) {
+    $("runError").textContent = "Cannot retry: this run has no saved image/puzzle (older or trimmed log).";
+    return;
+  }
+  if (!baseUrl() || !rec.model) { $("runError").textContent = "Cannot retry: set a base URL (proxy) and model."; return; }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  runExperiments({
+    image: rec.image, truth: rec.truth,
+    puzzleName: rec.puzzleName, metaphor: rec.metaphor,
+    model: rec.model, thinking: rec.thinking,
+  });
+}
+const countCells = (g) => g.reduce((s, r) => s + r.length, 0);
+
+// ─────────────────────────────────────────────────────────────────────────
+// Results rendering
+// ─────────────────────────────────────────────────────────────────────────
+function statBox(num, lbl, tone) {
+  const cls = tone === "bad" ? " bad" : tone === "warn" ? " warn" : "";
+  return `<div class="stat-box"><div class="stat-num${cls}">${num}</div><div class="stat-lbl">${lbl}</div></div>`;
+}
+function tone(pct) { return pct >= 99.9 ? "" : pct >= 70 ? "warn" : "bad"; }
+
+function renderGrid(grid, mask, label) {
+  const g = gridToInt(grid);
+  if (!g.length) return `<div class="grid-wrap"><div class="grid-label">${escapeHtml(label || "")}</div><div class="grid-empty">(empty)</div></div>`;
+  const CELL = 20;
+  let rows = "";
+  for (let r = 0; r < g.length; r++) {
+    let tds = "";
+    for (let c = 0; c < g[r].length; c++) {
+      const v = Math.max(0, Math.min(9, g[r][c]));
+      const txt = [0,1,2,6,9].includes(v) ? "#fff" : "#000";
+      const wrong = mask && mask[r] && mask[r][c];
+      const border = wrong ? "2px solid #f85149" : "1px solid rgba(255,255,255,0.10)";
+      tds += `<td style="width:${CELL}px;height:${CELL}px;background:${ARC_COLORS[v]};border:${border};color:${txt};line-height:${CELL}px">${v}</td>`;
+    }
+    rows += `<tr>${tds}</tr>`;
+  }
+  return `<div class="grid-wrap"><div class="grid-label">${escapeHtml(label || "")}</div><table class="grid">${rows}</table></div>`;
+}
+
+function solveDetail(exp, truthOut, title, extra) {
+  if (!exp) return "";
+  if (exp.skipped) return `<h3 class="exp-h">${title}</h3><div class="empty-note">Skipped — ${escapeHtml(exp.reason || "")}</div>`;
+  const mask = exp.predicted ? diffMask(gridToInt(exp.predicted), gridToInt(truthOut)) : null;
+  const verdict = exp.parsed
+    ? `<span class="badge ${exp.solved ? "solved" : "failed"}">${exp.solved ? "SOLVED" : "not solved"}</span> <span style="color:#8b949e;font-size:0.75rem">cell ${exp.cell.pct.toFixed(1)}%</span>`
+    : `<span class="badge failed">no JSON</span>`;
+  return `
+    <h3 class="exp-h">${title} ${verdict}</h3>
+    ${extra || ""}
+    <div class="pair-row">
+      ${renderGrid(exp.predicted || [], mask, "Model output")}
+      <div class="arrow">vs</div>
+      ${renderGrid(truthOut, null, "Truth output")}
+    </div>
+    ${exp.reasoning ? `<details><summary>Reasoning trace (${exp.reasoning.length.toLocaleString()} chars)</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.reasoning)}</pre></div></details>` : ""}
+    <details><summary>Raw response</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.raw || "(empty)")}</pre></div></details>`;
+}
+
+function reconDetail(exp, truth) {
+  if (!exp) return "";
+  if (!exp.parsed) return `<h3 class="exp-h">Reconstruction <span class="badge failed">no JSON</span></h3>
+    ${exp.reasoning
+      ? `<details open><summary>Reasoning trace (${exp.reasoning.length.toLocaleString()} chars) — likely where the answer got lost</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.reasoning)}</pre></div></details>`
+      : `<div class="empty-note" style="font-size:0.78rem">No reasoning trace captured — the model returned none (thinking may be off), or inlined it in the raw response below.</div>`}
+    <details><summary>Raw response</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.raw || "(empty)")}</pre></div></details>`;
+  const mo = exp.model_output || {};
+  let pairsHtml = "";
+  (truth.train || []).forEach((tp, i) => {
+    const mp = (mo.train || [])[i] || {};
+    const mIn = gridToInt(mp.input), tIn = gridToInt(tp.input);
+    const mOut = gridToInt(mp.output), tOut = gridToInt(tp.output);
+    pairsHtml += `<div style="margin:8px 0"><div class="grid-label">Train ${i + 1}</div>
+      <div class="pair-row"><div class="pair-who">Model</div>${renderGrid(mIn, mIn.length && tIn.length ? diffMask(mIn, tIn) : null, "Input")}<div class="arrow">→</div>${renderGrid(mOut, mOut.length && tOut.length ? diffMask(mOut, tOut) : null, "Output")}</div>
+      <div class="pair-row"><div class="pair-who">Truth</div>${renderGrid(tIn, null, "Input")}<div class="arrow">→</div>${renderGrid(tOut, null, "Output")}</div></div>`;
+  });
+  (truth.test || []).forEach((tp, i) => {
+    const mp = (mo.test || [])[i] || {};
+    const mIn = gridToInt(mp.input), tIn = gridToInt(tp.input);
+    pairsHtml += `<div style="margin:8px 0"><div class="grid-label">Test ${i + 1} input (output hidden from model)</div>
+      <div class="pair-row"><div class="pair-who">Model</div>${renderGrid(mIn, mIn.length && tIn.length ? diffMask(mIn, tIn) : null, "Input")}</div>
+      <div class="pair-row"><div class="pair-who">Truth</div>${renderGrid(tIn, null, "Input")}</div></div>`;
+  });
+  return `<h3 class="exp-h">Reconstruction <span style="color:#8b949e;font-size:0.75rem">visible-cell accuracy ${exp.recon.pct.toFixed(1)}% (${exp.recon.cells - exp.recon.errors}/${exp.recon.cells})</span></h3>
+    ${pairsHtml}
+    ${exp.reasoning ? `<details><summary>Reasoning trace (${exp.reasoning.length.toLocaleString()} chars)</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.reasoning)}</pre></div></details>` : ""}
+    <details><summary>Raw response</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.raw || "(empty)")}</pre></div></details>`;
+}
+
+function renderRun(rec, i) {
+  const truthOut = gridToInt((rec.truth.test[0] || {}).output || []);
+  const bs = rec.experiments.blindSolve, rc = rec.experiments.reconstruct, rs = rec.experiments.reconSolve;
+  const bsNum = bs ? (bs.parsed ? (bs.solved ? "✓" : bs.cell.pct.toFixed(0) + "%") : "—") : "—";
+  const rcNum = rc ? (rc.parsed ? rc.recon.pct.toFixed(0) + "%" : "—") : "—";
+  const rsNum = rs ? (rs.skipped ? "skip" : (rs.parsed ? (rs.solved ? "✓" : rs.cell.pct.toFixed(0) + "%") : "—")) : "—";
+  const bsTone = bs && bs.parsed ? (bs.solved ? "" : tone(bs.cell.pct)) : "bad";
+  const rcTone = rc && rc.parsed ? tone(rc.recon.pct) : "bad";
+  const rsTone = rs && !rs.skipped && rs.parsed ? (rs.solved ? "" : tone(rs.cell.pct)) : "bad";
+  const thinkBadge = rec.thinking ? '<span class="badge thinking">thinking</span>' : '<span class="badge nothink">no-think</span>';
+
+  const previewImg = rec.image ? `<details><summary>Puzzle image sent to the model</summary><div class="details-body"><img class="preview-img" src="${rec.image}" /></div></details>` : "";
+
+  return `<div class="run-card">
+    <div class="rc-head">
+      <div><div class="rc-title">${escapeHtml(rec.puzzleName)} ${thinkBadge}</div>
+        <div class="rc-meta">${escapeHtml(rec.model)} · ${new Date(rec.timestamp).toLocaleString()}${rec.metaphor ? " · “" + escapeHtml(rec.metaphor) + "”" : ""}</div></div>
+      <button class="secondary" style="font-size:0.72rem;padding:5px 11px" onclick="retryRun(${i})" title="Re-run all three with this run's model, thinking mode, and puzzle image">↻ Run again</button>
+    </div>
+    <div class="stat-row">
+      ${statBox(bsNum, "Blind solve", bsTone)}
+      ${statBox(rcNum, "Reconstruction", rcTone)}
+      ${statBox(rsNum, "Recon → solve", rsTone)}
+    </div>
+    <details><summary>Details</summary><div class="details-body">
+      ${previewImg}
+      ${solveDetail(bs, truthOut, "Blind solve", "")}
+      ${reconDetail(rc, rec.truth)}
+      ${solveDetail(rs, truthOut, "Reconstruct → solve", rs && rs.solvedFromJson ? `<details><summary>Reconstructed JSON it solved from</summary><div class="details-body"><pre class="raw">${escapeHtml(rs.solvedFromJson)}</pre></div></details>` : "")}
+    </div></details>
+  </div>`;
+}
+
+function renderResults() {
+  const el = $("results");
+  if (!runs.length) { el.innerHTML = `<div class="empty-note">No runs yet. Configure a model, load a puzzle, and press “Run all three”. Or load a saved log.</div>`; $("logStatus").textContent = ""; return; }
+  el.innerHTML = runs.map(renderRun).join("");
+  $("logStatus").textContent = `${runs.length} run(s) in log.`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Log persistence
+// ─────────────────────────────────────────────────────────────────────────
+function saveRuns() {
+  try { localStorage.setItem(LS.runs, JSON.stringify(runs)); }
+  catch (e) { $("logStatus").innerHTML = `<span style="color:#d29922">In-memory only — browser storage full (${runs.length} runs). Download to keep them.</span>`; }
+}
+function loadRuns() {
+  try { runs = JSON.parse(localStorage.getItem(LS.runs) || "[]"); if (!Array.isArray(runs)) runs = []; }
+  catch { runs = []; }
+}
+function downloadLog() {
+  if (!runs.length) { $("logStatus").textContent = "Nothing to download."; return; }
+  const blob = new Blob([JSON.stringify({ tool: "model-baseline-analysis", exported: new Date().toISOString(), runs }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `baseline-log-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function loadLog(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const loaded = Array.isArray(data) ? data : (data.runs || []);
+      if (!Array.isArray(loaded)) throw new Error("no runs array found");
+      runs = loaded.concat(runs);
+      saveRuns(); renderResults();
+      $("logStatus").innerHTML = `<span class="ok">Loaded ${loaded.length} run(s) from file.</span>`;
+    } catch (e) { $("logStatus").innerHTML = `<span style="color:#f85149">Could not load log: ${escapeHtml(String(e.message || e))}</span>`; }
+  };
+  reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────────────────
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Wire up
+// ─────────────────────────────────────────────────────────────────────────
+loadConfig();
+bindConfigPersistence();
+initModels();
+loadRuns();
+renderResults();
+
+$("refreshModels").addEventListener("click", refreshModels);
+$("puzzleFile").addEventListener("change", e => { if (e.target.files[0]) onPuzzleFile(e.target.files[0]); });
+$("model").addEventListener("input", setRunEnabled);
+$("baseUrl").addEventListener("input", setRunEnabled);
+$("runBtn").addEventListener("click", runAll);
+$("downloadLog").addEventListener("click", downloadLog);
+$("clearLog").addEventListener("click", () => { if (confirm("Clear all runs from this browser's log? (Downloaded files are unaffected.)")) { runs = []; saveRuns(); renderResults(); } });
+$("loadLogBtn").addEventListener("click", () => $("loadLogFile").click());
+$("loadLogFile").addEventListener("change", e => { if (e.target.files[0]) loadLog(e.target.files[0]); });
+setRunEnabled();
+</script>
+</body>
+</html>

@@ -43,6 +43,7 @@ const TAG_CLASSES = {
   Setup:    "tag-setup",
   Results:  "tag-results",
   Bug:      "tag-bug",
+  Tools:    "tag-tools",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

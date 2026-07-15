@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 7 — The Greyscale Pattern Lab</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117; color: #e6edf3; padding: 24px 16px; line-height: 1.6;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back-link { display: inline-block; font-size: 0.82rem; color: #8b949e; margin-bottom: 18px; }
+    .back-link:hover { color: #e6edf3; }
+    .card {
+      background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+      padding: 22px 26px; margin-bottom: 20px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
+    h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 10px; color: #e6edf3; }
+    .meta-row { font-size: 0.8rem; color: #8b949e; display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+    .meta-row strong { color: #e6edf3; }
+    .tags { display: flex; gap: 6px; }
+    .tag { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px; background: rgba(188,140,255,0.15); color: #bc8cff; }
+    .sub { color: #c9d1d9; font-size: 0.95rem; }
+    p { margin-bottom: 0.8rem; }
+    p:last-child { margin-bottom: 0; }
+    code { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; font-size: 0.85em; font-family: "SF Mono", "Fira Code", monospace; }
+    .callout {
+      background: rgba(63,185,80,0.10); border-left: 3px solid #3fb950;
+      border-radius: 0 6px 6px 0; padding: 0.85rem 1.1rem; margin: 0.5rem 0 0.2rem;
+      font-size: 0.92rem; color: #e6edf3;
+    }
+    ul, ol { margin: 0.3rem 0 0.5rem 1.2rem; }
+    li { margin-bottom: 0.45rem; }
+    .cta {
+      display: inline-block; background: #238636; border: 1px solid #2ea043; color: #fff;
+      border-radius: 6px; padding: 0.55rem 1.1rem; font-weight: 600; font-size: 0.9rem; margin-top: 6px;
+    }
+    .cta:hover { background: #2ea043; text-decoration: none; }
+    .feature {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      padding: 14px 18px; margin-bottom: 12px;
+    }
+    .feature h3 { font-size: 0.95rem; margin-bottom: 5px; color: #bc8cff; }
+    .feature p { font-size: 0.9rem; margin: 0; color: #c9d1d9; }
+    .note { font-size: 0.82rem; color: #8b949e; }
+    .divider { border: none; border-top: 1px solid #30363d; margin: 4px 0 14px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="index.html">← Summer Project 2026</a>
+
+  <div class="card">
+    <h1>Week 7 — The Greyscale Pattern Lab</h1>
+    <div class="meta-row">
+      <span><strong>Week 7</strong></span>
+      <span>July 15, 2026</span>
+      <span class="tags"><span class="tag">Tools</span><span class="tag">Progress</span></span>
+    </div>
+    <p class="sub">Every result so far points to the same weak spot: models read the <em>shape</em> of these
+      puzzles almost perfectly but read the <em>colors</em> only partially. If color is the bottleneck, the fix is
+      likely in the <em>representation</em> — so this week's tool lets us design and preview puzzle
+      representations that don't lean on color at all: greyscale shades, hand-drawn glyphs, or uploaded icons for
+      each of the values 0–9.</p>
+    <a class="cta" href="greyscale-lab.html">Open the Greyscale Pattern Lab →</a>
+  </div>
+
+  <div class="card">
+    <h2>In Plain Terms</h2>
+    <div class="callout">Weeks 3–6 kept finding the same thing: an AI can look at one of these colored-grid puzzles
+      and copy its <strong>shape</strong> back almost perfectly, but it gets a lot of the <strong>colors</strong>
+      wrong. So the natural question is: what if we stop relying on color? Instead of ten colors, what if each value
+      1–9 were a distinct grey shade, or a little drawn symbol? This tool lets you invent those visuals by hand,
+      drop in a real puzzle, and immediately see the whole thing redrawn with your design — so you can judge which
+      representation looks clearest and best preserves the puzzle before we ever spend model time on it.</div>
+  </div>
+
+  <div class="card">
+    <h2>Why This Week</h2>
+    <p>The Week 4 legend win and the Week 5–6 cross-model results told a consistent story: swapping models doesn't
+      fix the color problem — the bottleneck is how the puzzle is <em>drawn</em>, not which model reads it. Adding a
+      color legend already lifted accuracy once. The obvious next lever is the encoding itself.</p>
+    <p>Before running a formal experiment, we need a fast way to <em>iterate on the encoding</em> and eyeball it on
+      real puzzles: does a greyscale ramp stay legible? Do hand-drawn glyphs read more distinctly than shades? Does
+      the puzzle's structure survive the swap? The Greyscale Pattern Lab is that iteration surface — a design bench,
+      not an experiment.</p>
+  </div>
+
+  <div class="card">
+    <h2>What It Does</h2>
+    <p>You design a per-digit visual for each value <strong>0–9</strong>, load an ARC-style puzzle JSON, and the tool
+      re-renders every train/test grid with your design. Export the result as a PNG to compare encodings
+      side-by-side. It is one fully self-contained HTML file — no dependencies, no server — and it is hosted here,
+      so anyone can use it directly in the browser.</p>
+    <div class="feature">
+      <h3>Three render modes</h3>
+      <p><strong>Grey shades</strong> — each value maps to a shade on a tunable grey ramp. <strong>Custom
+        images</strong> — each cell is drawn with your uploaded or hand-drawn glyph. <strong>Original colors</strong>
+        — the standard ARC palette, as a side-by-side baseline to compare against.</p>
+    </div>
+    <div class="feature">
+      <h3>Draw or upload per value</h3>
+      <p>An in-browser drawing canvas with an adjustable brush and a grey-shade slider for designing greyscale
+        glyphs, or upload an image for any value. Value 0 defaults to a plain background but is editable.</p>
+    </div>
+    <div class="feature">
+      <h3>Tunable & shareable</h3>
+      <p>Adjust the grey ramp (dark/light ends, invert), background, cell size, gridlines, and an optional digit-label
+        overlay. Paste or upload puzzle JSON, export the rendered puzzle as PNG, and your designs persist in the
+        browser between sessions. Light/dark theme matches the rest of the site.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>How to Use It</h2>
+    <ol>
+      <li>Open the <a href="greyscale-lab.html">Greyscale Pattern Lab</a> and click <strong>Load sample</strong> to
+        render a puzzle immediately.</li>
+      <li>For each value, click <strong>Draw</strong> to sketch a glyph or <strong>Upload</strong> an image — or just
+        stay in <strong>Grey shades</strong> mode and tune the ramp.</li>
+      <li>Switch between <strong>Grey shades</strong>, <strong>Custom images</strong>, and <strong>Original
+        colors</strong> to compare how each encoding reads on the same puzzle.</li>
+      <li>Paste your own puzzle JSON (standard <code>train</code>/<code>test</code> format) or upload a
+        <code>.json</code> file, then <strong>Render</strong>.</li>
+      <li><strong>Export PNG</strong> to save an encoding for comparison or to drop into a future report.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Next Steps</h2>
+    <div class="callout">With a design bench in hand, the plan is to pick the greyscale/glyph encoding that reads
+      most clearly, render the puzzle set with it, and run it back through the Week 6 baseline tool — testing
+      directly whether a color-free representation closes the perception gap that every model has shown so far.</div>
+    <p class="note" style="margin-top:0.8rem">Related: <a href="report-week6.html">Week 6 — Baseline tool</a> ·
+      <a href="report-week5.html">Week 5 — Cross-model</a> ·
+      <a href="report-week3.html">Week 3</a>.</p>
+  </div>
+</div>
+</body>
+</html>

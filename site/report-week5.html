@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 5 — Cross-Model MARC Reconstruction</title>
+  <style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+  padding: 24px 16px;
+  line-height: 1.5;
+}
+.page-wrap { max-width: 1100px; margin: 0 auto; }
+
+/* Header */
+.report-header {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 22px 26px;
+  margin-bottom: 24px;
+}
+.report-header h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; }
+.meta-row { font-size: 0.82rem; color: #8b949e; margin-bottom: 14px; display: flex; gap: 20px; flex-wrap: wrap; }
+.meta-row strong { color: #e6edf3; }
+.stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.stat-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 16px; text-align: center; min-width: 100px; }
+.stat-num { font-size: 1.5rem; font-weight: 700; color: #3fb950; }
+.stat-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; margin-top: 2px; }
+.legend-note { font-size: 0.82rem; color: #8b949e; }
+.legend-note strong { color: #e6edf3; }
+
+/* TOC */
+.toc { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
+.toc h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e; margin-bottom: 10px; }
+.toc ol { padding-left: 18px; column-count: 2; column-gap: 24px; }
+.toc li { font-size: 0.83rem; margin-bottom: 4px; line-height: 1.5; }
+.toc a { color: #58a6ff; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+/* Puzzle cards */
+.puzzle-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  padding: 20px 22px;
+}
+.card-header { margin-bottom: 16px; }
+.card-header h2 { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.metaphor { color: #8b949e; font-style: italic; font-size: 0.85rem; margin-top: 5px; }
+
+/* Pair blocks */
+.pair-block { margin-bottom: 20px; }
+.pair-heading { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em; color: #3fb950; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.pair-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.pair-who { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; font-weight: 600; width: 48px; flex-shrink: 0; padding-top: 20px; }
+.grid-wrap { display: flex; flex-direction: column; }
+.grid-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e; margin-bottom: 4px; }
+.grid-empty { font-size: 0.75rem; color: #8b949e; font-style: italic; padding: 8px; border: 1px dashed #30363d; border-radius: 4px; }
+.arrow { font-size: 1.4rem; color: #8b949e; padding: 0 4px; align-self: center; padding-top: 20px; }
+
+/* Reasoning */
+details { margin-top: 14px; border-top: 1px solid #30363d; padding-top: 10px; }
+summary { cursor: pointer; font-size: 0.8rem; color: #8b949e; user-select: none; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "▶ "; font-size: 0.65rem; }
+details[open] > summary::before { content: "▼ "; }
+summary:hover { color: #e6edf3; }
+details[open] > summary { margin-bottom: 8px; }
+.reasoning-pre {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 0.7rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+  overflow: auto;
+  max-height: 200px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #8b949e;
+}
+
+@media (max-width: 600px) {
+  .toc ol { column-count: 1; }
+  .pair-row { gap: 6px; }
+}
+
+    .cmp-wrap { max-width: 980px; margin: 0 auto; }
+    .cmp-card { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:22px 26px; margin-bottom:20px; }
+    table th, table td { border-bottom:1px solid #30363d; padding:8px 12px; }
+    table th { color:#8b949e; text-transform:uppercase; font-size:0.7rem; letter-spacing:0.06em; }
+    table a { color:#58a6ff; text-decoration:none; }
+    table a:hover { text-decoration:underline; }
+    h1 { font-size:1.4rem; margin-bottom:8px; }
+    .sub { color:#8b949e; font-size:0.85rem; margin-bottom:18px; }
+    </style>
+</head>
+<body>
+<div class="cmp-wrap">
+  <div class="cmp-card">
+    <h1>Week 5 — Cross-Model MARC Reconstruction</h1>
+    <p class="sub">Preliminary sweep (3 puzzles per config) testing whether the
+      structure-perfect / color-weak pattern seen with qwen3.6-35b generalizes to other vLLM vision models.
+      The <strong>Wk4</strong> row is last week's qwen3.6-35b restricted to these same puzzles, for an
+      apples-to-apples baseline. Thinking-mode runs appear only for models that support
+      <code>enable_thinking</code>.</p>
+    <table style="border-collapse:collapse;width:100%;font-size:0.86rem"><thead><tr><th style="text-align:left">Week</th><th style="text-align:left">Model</th><th style="text-align:left">Mode</th><th style="text-align:left">JSON parsed</th><th style="text-align:left">Cell accuracy</th><th style="text-align:left">Correct / total cells</th><th style="text-align:left">Report</th></tr></thead><tbody><tr><td>Wk4</td><td style="font-family:monospace">qwen/qwen3.6-35b</td><td>no-think</td><td>3/3</td><td style="color:#22c55e;font-weight:700">81.1%</td><td>868/1,070</td><td><a href="report-week4-nothinking.html">detail →</a></td></tr><tr><td>Wk5</td><td style="font-family:monospace">qwen3-vl:32b</td><td>no-think</td><td>1/3</td><td style="color:#ef4444;font-weight:700">9.8%</td><td>105/1,070</td><td><a href="report-week5-qwen3-vl-32b-nothink.html">detail →</a></td></tr><tr><td>Wk5</td><td style="font-family:monospace">google/gemma-4-31b</td><td>no-think</td><td>3/3</td><td style="color:#f59e0b;font-weight:700">62.4%</td><td>668/1,070</td><td><a href="report-week5-google-gemma-4-31b-nothink.html">detail →</a></td></tr><tr><td>Wk5</td><td style="font-family:monospace">qwen/qwen3.5-122b</td><td>no-think</td><td>3/3</td><td style="color:#22c55e;font-weight:700">76.0%</td><td>813/1,070</td><td><a href="report-week5-qwen-qwen3-5-122b-nothink.html">detail →</a></td></tr></tbody></table>
+    <p class="sub" style="margin-top:16px">Each row links to a full visual report with per-cell diffs (red border =
+      wrong color), in the same format as the Week 3/4 reports. Prior weeks:
+      <a href="report-week4-nothinking.html">Wk4 no-think</a> ·
+      <a href="report-week4-thinking.html">Wk4 thinking</a> ·
+      <a href="report-week3.html">Wk3</a>.</p>
+  </div>
+</div>
+</body>
+</html>
