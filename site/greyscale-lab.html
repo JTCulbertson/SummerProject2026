@@ -173,11 +173,22 @@
   .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin: .6rem 0; }
 
   /* ── Puzzle output ── */
-  .puzzle-meta { font-size: 1.05rem; font-weight: 600; margin: .5rem 0 1rem; }
+  .puzzle-meta { font-size: 1.05rem; font-weight: 600; margin: .5rem 0 .3rem; }
+  .puzzle-sub { color: var(--muted); font-size: .9rem; margin: 0 0 1rem; max-width: 80ch; }
   .pair-row {
     display: flex; align-items: center; gap: 1rem;
     margin-bottom: 1.1rem; flex-wrap: wrap;
   }
+  .seq-row {
+    display: flex; align-items: flex-start; gap: .9rem;
+    margin-bottom: 1.1rem; flex-wrap: wrap;
+  }
+  .masked-box {
+    display: flex; align-items: center; justify-content: center;
+    border: 1px dashed var(--border); border-radius: 4px;
+    color: var(--muted); font-size: 1.6rem; background: var(--panel2);
+  }
+  .cell-block.masked .pair-label { color: var(--link); }
   .pair-label { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; }
   .arrow { font-size: 1.6rem; color: var(--muted); }
   .grid-canvas { border: 1px solid var(--border); border-radius: 4px; image-rendering: pixelated; background: var(--canvas-bg); }
@@ -273,7 +284,7 @@
   <!-- ─────────── MAIN ─────────── -->
   <main class="main">
     <div class="section-label">Puzzle JSON</div>
-    <textarea id="json-input" placeholder='Paste an ARC-style puzzle here, e.g. {"metaphor":"...","train":[{"input":[[0,1],[1,0]],"output":[[1,0],[0,1]]}],"test":[{"input":[[0,0],[1,1]],"output":[[1,1],[0,0]]}]}'></textarea>
+    <textarea id="json-input" placeholder='Paste a puzzle here. MARC (metaphor + train/test pairs), e.g. {"metaphor":"...","train":[{"input":[[0,1]],"output":[[1,0]]}],"test":[...]}  —  or NARC (narrative + sequence), e.g. {"schema":"narc-export-v1","title":"...","narrative":"...","sequence":[{"position":0,"grid":[[...]],"label":"Mon."}],"masked_positions":[3],"answer_grids":{"3":[[...]]}}'></textarea>
     <div class="btn-row">
       <button class="primary" id="render-btn">Render puzzle</button>
       <label class="upload-wrap">
@@ -435,30 +446,86 @@ function makeGridCanvas(grid) {
 }
 
 // ── Puzzle parse ──
+const isGrid = g => Array.isArray(g) && g.length && Array.isArray(g[0]);
+
 function parsePuzzle(text) {
   const data = JSON.parse(text);
-  // Normalize into {metaphor, train:[{input,output}], test:[...]}
+
+  // ── NARC (narrative sequence) format ──
+  // e.g. { schema:"narc-export-v1", title, narrative, sequence:[{position,grid,label}],
+  //        masked_positions:[3], answer_grids:{"3":[[...]]} }
+  const isNarc = (typeof data.schema === "string" && data.schema.toLowerCase().startsWith("narc"))
+              || Array.isArray(data.sequence);
+  if (isNarc) {
+    const narrative = data.narrative
+      || (Array.isArray(data.variants) && data.variants[0] && data.variants[0].narrative) || "";
+    const masked = new Set((data.masked_positions || []).map(Number));
+    const answers = data.answer_grids || {};
+    const seq = (data.sequence || []).slice()
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    const items = seq.map((s, i) => {
+      const pos = (s.position != null) ? s.position : i;
+      const grid = isGrid(s.grid) ? s.grid : null;
+      const answerGrid = isGrid(answers[String(pos)]) ? answers[String(pos)] : null;
+      const isMasked = masked.has(Number(pos)) || (!grid && !!answerGrid);
+      return {
+        label: s.label || `#${pos}`,
+        grid, answerGrid, masked: isMasked,
+        rows: s.rows || null, cols: s.cols || null,
+      };
+    });
+    if (!items.length) throw new Error("NARC puzzle has an empty `sequence`.");
+    return { type: "sequence", title: data.title || "", heading: narrative, items };
+  }
+
+  // ── MARC (metaphor, train/test pairs) format ──
   let train = [], test = [];
-  const isGrid = g => Array.isArray(g) && g.length && Array.isArray(g[0]);
   if (Array.isArray(data.train)) train = data.train;
   if (Array.isArray(data.test)) test = data.test;
   if (!train.length && !test.length) {
     if (isGrid(data.input)) train = [{ input: data.input, output: data.output }];
     else if (isGrid(data)) train = [{ input: data }];
-    else throw new Error("Could not find `train`/`test` arrays or an `input` grid in this JSON.");
+    else throw new Error("Could not find `train`/`test` arrays, a `sequence` (NARC), or an `input` grid in this JSON.");
   }
-  return { metaphor: data.metaphor || "", train, test };
+  return { type: "pairs", heading: data.metaphor || "", train, test };
+}
+
+// Fallback dimensions for a masked/hidden grid: prefer its own rows/cols, else the
+// largest visible grid in the sequence, else a small default.
+function seqDims(items) {
+  let r = 0, c = 0;
+  for (const it of items) {
+    const g = it.grid || it.answerGrid;
+    if (g) { r = Math.max(r, g.length); c = Math.max(c, g[0].length); }
+  }
+  return { rows: r || 3, cols: c || 3 };
 }
 
 // ── Render puzzle to DOM ──
+function block(lbl, node, extraClass) {
+  const b = document.createElement("div"); b.className = "cell-block" + (extraClass ? " " + extraClass : "");
+  const l = document.createElement("div"); l.className = "pair-label"; l.textContent = lbl;
+  b.appendChild(l); b.appendChild(node); return b;
+}
+function maskedBox(rows, cols) {
+  const cs = state.cellSize;
+  const q = document.createElement("div"); q.className = "masked-box";
+  q.style.width = (cols * cs) + "px"; q.style.height = (rows * cs) + "px";
+  q.textContent = "?"; return q;
+}
+
 function renderPuzzle() {
   const out = document.getElementById("output");
   out.innerHTML = "";
   if (!puzzleData) { out.innerHTML = '<div class="empty-hint">Load a puzzle and click <em>Render puzzle</em>.</div>'; return; }
-  if (puzzleData.metaphor) {
+
+  if (puzzleData.type === "sequence") { renderSequence(out); return; }
+
+  // ── MARC pairs ──
+  if (puzzleData.heading) {
     const m = document.createElement("div");
     m.className = "puzzle-meta";
-    m.textContent = "Metaphor: " + puzzleData.metaphor;
+    m.textContent = "Metaphor: " + puzzleData.heading;
     out.appendChild(m);
   }
   const rows = [
@@ -467,8 +534,7 @@ function renderPuzzle() {
   ];
   for (const { p, label, reveal } of rows) {
     const row = document.createElement("div"); row.className = "pair-row";
-    const inBlock = block(`${label} Input`, makeGridCanvas(p.input));
-    row.appendChild(inBlock);
+    row.appendChild(block(`${label} Input`, makeGridCanvas(p.input)));
     const arrow = document.createElement("div"); arrow.className = "arrow"; arrow.textContent = "→";
     row.appendChild(arrow);
     if (p.output && reveal) {
@@ -479,22 +545,80 @@ function renderPuzzle() {
     }
     out.appendChild(row);
   }
-  function block(lbl, node) {
-    const b = document.createElement("div"); b.className = "cell-block";
-    const l = document.createElement("div"); l.className = "pair-label"; l.textContent = lbl;
-    b.appendChild(l); b.appendChild(node); return b;
+}
+
+// ── NARC narrative sequence ──
+function renderSequence(out) {
+  if (puzzleData.title) {
+    const t = document.createElement("div"); t.className = "puzzle-meta"; t.textContent = puzzleData.title;
+    out.appendChild(t);
   }
+  if (puzzleData.heading) {
+    const m = document.createElement("div"); m.className = "puzzle-sub";
+    m.textContent = "Narrative: " + puzzleData.heading; out.appendChild(m);
+  }
+  const { rows, cols } = seqDims(puzzleData.items);
+  const row = document.createElement("div"); row.className = "seq-row";
+  puzzleData.items.forEach((it) => {
+    let node, cls = "";
+    if (it.masked) {
+      cls = "masked";
+      if (state.showSolution && it.answerGrid) node = makeGridCanvas(it.answerGrid);
+      else node = maskedBox(it.rows || rows, it.cols || cols);
+    } else if (it.grid) {
+      node = makeGridCanvas(it.grid);
+    } else {
+      node = maskedBox(it.rows || rows, it.cols || cols);
+    }
+    const label = it.masked ? `${it.label} (?)` : it.label;
+    row.appendChild(block(label, node, cls));
+  });
+  out.appendChild(row);
 }
 
 // ── Export composed PNG ──
+function exportTheme() {
+  const c = getComputedStyle(document.documentElement);
+  const g = (k, d) => (c.getPropertyValue(k).trim() || d);
+  return {
+    bg: g("--bg", "#0d1117"), text: g("--text", "#e6edf3"), muted: g("--muted", "#8b949e"),
+    panel: g("--panel2", "#1c2129"), border: g("--border", "#30363d"),
+  };
+}
+function truncateToWidth(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(t + "…").width > maxW) t = t.slice(0, -1);
+  return t + "…";
+}
+function downloadCanvas(cv, name) {
+  const a = document.createElement("a");
+  a.download = (name || "puzzle") + "-greyscale.png";
+  a.href = cv.toDataURL("image/png");
+  a.click();
+}
+function drawMaskedBox(ctx, x, y, r, c, cs, th) {
+  ctx.fillStyle = th.panel; ctx.fillRect(x, y, c*cs, r*cs);
+  ctx.strokeStyle = th.border; ctx.setLineDash([4,3]);
+  ctx.strokeRect(x+0.5, y+0.5, c*cs-1, r*cs-1); ctx.setLineDash([]);
+  ctx.fillStyle = th.muted; ctx.font = `${Math.round(cs*1.2)}px sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("?", x + c*cs/2, y + r*cs/2);
+}
+
 function exportPNG() {
   if (!puzzleData) { showError("Nothing to export — render a puzzle first."); return; }
   const cs = state.cellSize, pad = 16, gap = cs * 1.2, labelH = 16;
+  const th = exportTheme();
+
+  if (puzzleData.type === "sequence") { exportSequencePNG(cs, pad, gap, labelH, th); return; }
+
+  // ── MARC pairs ──
   const rows = [
     ...puzzleData.train.map((p,i) => ({ p, label: `Train ${i+1}`, reveal: true })),
     ...puzzleData.test.map((p,i) => ({ p, label: `Test ${i+1}`, reveal: state.showSolution })),
   ];
-  const metaH = puzzleData.metaphor ? 28 : 0;
+  const metaH = puzzleData.heading ? 28 : 0;
   let totalW = 0, totalH = pad*2 + metaH;
   const rowDims = rows.map(({p}) => {
     const iw = (p.input[0]?.length||0)*cs, ih = p.input.length*cs;
@@ -504,35 +628,70 @@ function exportPNG() {
     return { iw, ih, ow, oh, w, h };
   });
   totalW += pad*2;
-  const themeCss = getComputedStyle(document.documentElement);
-  const exBg = (themeCss.getPropertyValue("--bg").trim() || "#0d1117");
-  const exText = (themeCss.getPropertyValue("--text").trim() || "#e6edf3");
-  const exMuted = (themeCss.getPropertyValue("--muted").trim() || "#8b949e");
   const cv = document.createElement("canvas");
   cv.width = Math.ceil(totalW); cv.height = Math.ceil(totalH);
   const ctx = cv.getContext("2d");
-  ctx.fillStyle = exBg; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle = th.bg; ctx.fillRect(0,0,cv.width,cv.height);
   let y = pad;
-  if (puzzleData.metaphor) {
-    ctx.fillStyle = exText; ctx.font = "600 16px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.fillText("Metaphor: " + puzzleData.metaphor, pad, y); y += metaH;
+  if (puzzleData.heading) {
+    ctx.fillStyle = th.text; ctx.font = "600 16px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("Metaphor: " + puzzleData.heading, pad, y); y += metaH;
   }
   rows.forEach(({p, label, reveal}, idx) => {
     const d = rowDims[idx];
-    ctx.fillStyle = exMuted; ctx.font = "11px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillStyle = th.muted; ctx.font = "11px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillText(label, pad, y);
     const gy = y + labelH;
     drawGridToCtx(ctx, p.input, pad, gy, cs);
-    ctx.fillStyle = exMuted; ctx.font = "20px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = th.muted; ctx.font = "20px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText("→", pad + d.iw + gap/2, gy + d.ih/2);
     if (p.output && reveal) drawGridToCtx(ctx, p.output, pad + d.iw + gap, gy, cs);
     else { ctx.fillText("?", pad + d.iw + gap + cs/2, gy + cs/2); }
     y += d.h + gap;
   });
-  const a = document.createElement("a");
-  a.download = "puzzle-greyscale.png";
-  a.href = cv.toDataURL("image/png");
-  a.click();
+  downloadCanvas(cv, null);
+}
+
+// ── NARC sequence PNG (horizontal filmstrip) ──
+function exportSequencePNG(cs, pad, gap, labelH, th) {
+  const { rows: R, cols: C } = seqDims(puzzleData.items);
+  const cells = puzzleData.items.map((it) => {
+    const grid = it.masked ? (state.showSolution && it.answerGrid ? it.answerGrid : null)
+                           : (it.grid || null);
+    const r = grid ? grid.length : (it.rows || R);
+    const c = grid ? grid[0].length : (it.cols || C);
+    return { it, grid, r, c };
+  });
+  const titleH = puzzleData.title ? 24 : 0;
+  const narrH = puzzleData.heading ? 22 : 0;
+  const maxH = cells.reduce((m, x) => Math.max(m, x.r*cs), 0);
+  const stripW = cells.reduce((s, x, i) => s + x.c*cs + (i ? gap : 0), 0);
+  const totalW = pad*2 + stripW;
+  const totalH = pad*2 + titleH + narrH + labelH + maxH;
+  const cv = document.createElement("canvas");
+  cv.width = Math.ceil(totalW); cv.height = Math.ceil(totalH);
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = th.bg; ctx.fillRect(0,0,cv.width,cv.height);
+  let y = pad;
+  if (puzzleData.title) {
+    ctx.fillStyle = th.text; ctx.font = "600 16px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(puzzleData.title, pad, y); y += titleH;
+  }
+  if (puzzleData.heading) {
+    ctx.fillStyle = th.muted; ctx.font = "12px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(truncateToWidth(ctx, "Narrative: " + puzzleData.heading, totalW - pad*2), pad, y); y += narrH;
+  }
+  const gy = y + labelH;
+  let x = pad;
+  cells.forEach(({ it, grid, r, c }) => {
+    ctx.fillStyle = it.masked ? th.text : th.muted; ctx.font = "11px sans-serif";
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(it.masked ? `${it.label} (?)` : it.label, x, y);
+    if (grid) drawGridToCtx(ctx, grid, x, gy, cs);
+    else drawMaskedBox(ctx, x, gy, r, c, cs, th);
+    x += c*cs + gap;
+  });
+  downloadCanvas(cv, puzzleData.title ? puzzleData.title.toLowerCase().replace(/\s+/g, "-") : "narc");
 }
 
 // ── Errors ──
