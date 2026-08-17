@@ -1,0 +1,276 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:08:59.658574Z",
+  "puzzle_id": "sub_026",
+  "title": "\ud83e\udde9Pinky",
+  "narrative": "In a dish with bacteria, scientists are measuring the spread of the bacteria Pinky. The top half of the dish does not have a separating wall, so scientists can see how Pinky combines with other Pinky. Pinky grows to the adjacent walls of the dish. The grey barriers keep the bottom half from touching each other and also protect the top half. Over a day, Pinky has completely covered the top of the dish, and the bottom corners have stopped growing. The scientists implanted a green bacterium, Verde. Verde filled the remaining spots in the bottom half of pinky. The next morning, scientists came back to see that Verde had eaten through all of the bottom Pinky and the separating walls, therefore also contaminating the top Pinky. Scientists are impressed by the destruction of Verde.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": [
+        [
+          6,
+          0,
+          0,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        [
+          0,
+          0,
+          5,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          5,
+          0,
+          6
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": ""
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          6,
+          6,
+          0,
+          6,
+          6
+        ],
+        [
+          6,
+          0,
+          0,
+          0,
+          6
+        ],
+        [
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        [
+          6,
+          0,
+          5,
+          0,
+          6
+        ],
+        [
+          6,
+          6,
+          5,
+          6,
+          6
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": null,
+      "rows": 5,
+      "cols": 5,
+      "label": "",
+      "masked": true
+    },
+    {
+      "position": 3,
+      "grid": [
+        [
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        [
+          6,
+          3,
+          3,
+          3,
+          6
+        ],
+        [
+          5,
+          3,
+          3,
+          3,
+          5
+        ],
+        [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        [
+          3,
+          3,
+          3,
+          3,
+          3
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": ""
+    }
+  ],
+  "masked_positions": [
+    2
+  ],
+  "answer_grids": {
+    "2": [
+      [
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        6,
+        3,
+        5,
+        3,
+        6
+      ],
+      [
+        6,
+        6,
+        5,
+        6,
+        6
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "active",
+  "created_at": "2026-08-07 22:00:58",
+  "variants": [
+    {
+      "variant_id": 1264,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "In a dish with bacteria, scientists are measuring the spread of the bacteria Pinky. The top half of the dish does not have a separating wall, so scientists can see how Pinky combines with other Pinky. Pinky grows to the adjacent walls of the dish. The grey barriers keep the bottom half from touching each other and also protect the top half. Over a day, Pinky has completely covered the top of the dish, and the bottom corners have stopped growing. The scientists implanted a green bacterium, Verde. Verde filled the remaining spots in the bottom half of pinky. The next morning, scientists came back to see that Verde had eaten through all of the bottom Pinky and the separating walls, therefore also contaminating the top Pinky. Scientists are impressed by the destruction of Verde.",
+      "generator": "human",
+      "created_at": "2026-08-07 22:00:58"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": 1075,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

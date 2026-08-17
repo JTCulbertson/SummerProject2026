@@ -1,0 +1,201 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:09:24.639501Z",
+  "puzzle_id": "sub_088",
+  "title": "\ud83e\udde9Moka pot 01 small ver.",
+  "narrative": "Bella was making coffee with a moka pot. She poured purified water into the bottom chamber and added ground coffee to the filter basket in the middle. As the pot heated up, pressure forced the water from the bottom chamber through the coffee grounds and into the top chamber, producing coffee. Not all of the water was transferred to the top chamber, a layer of water remained in the bottom chamber. Bella poured out all the coffee and began to enjoy it.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": [
+        [
+          0
+        ],
+        [
+          0
+        ],
+        [
+          0
+        ],
+        [
+          9
+        ],
+        [
+          9
+        ],
+        [
+          8
+        ],
+        [
+          8
+        ],
+        [
+          8
+        ],
+        [
+          8
+        ]
+      ],
+      "rows": 9,
+      "cols": 1,
+      "label": ""
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          7
+        ],
+        [
+          7
+        ],
+        [
+          7
+        ],
+        [
+          9
+        ],
+        [
+          9
+        ],
+        [
+          0
+        ],
+        [
+          0
+        ],
+        [
+          0
+        ],
+        [
+          8
+        ]
+      ],
+      "rows": 9,
+      "cols": 1,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": null,
+      "rows": 9,
+      "cols": 1,
+      "label": "",
+      "masked": true
+    }
+  ],
+  "masked_positions": [
+    2
+  ],
+  "answer_grids": {
+    "2": [
+      [
+        0
+      ],
+      [
+        0
+      ],
+      [
+        0
+      ],
+      [
+        9
+      ],
+      [
+        9
+      ],
+      [
+        0
+      ],
+      [
+        0
+      ],
+      [
+        0
+      ],
+      [
+        8
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "draft",
+  "created_at": "2026-08-03 21:16:52",
+  "variants": [
+    {
+      "variant_id": 1251,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "Bella was making coffee with a moka pot. She poured purified water into the bottom chamber and added ground coffee to the filter basket in the middle. As the pot heated up, pressure forced the water from the bottom chamber through the coffee grounds and into the top chamber, producing coffee. Not all of the water was transferred to the top chamber, a layer of water remained in the bottom chamber. Bella poured out all the coffee and began to enjoy it.",
+      "generator": "human",
+      "created_at": "2026-08-03 21:16:52"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

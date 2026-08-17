@@ -1,69 +1,69 @@
 {
   "schema": "narc-export-v1",
-  "exported_at": "2026-06-01T21:23:43.487721Z",
-  "puzzle_id": "sub_005",
-  "title": "Lunch",
-  "narrative": "Four friends get lunch together every day. They go to a ramen place downtown and have particularities about their order. Terb gets the same thing every day, ramen with green onions on top. Niloc gets the same thing every day, ramen with hot sauce across the noodles. On Wednesday, Terb and Niloc treat themselves to extra green onions and extra hot sauce. Nosaj gets creative. Starting on Monday, he gets green onions with a little hot sauce. Tuesday, he gets a portion of dark meat with no other toppings. Like Terb and Niloc on Wednesday, Nosaj goes all out with half meat and a little green onions with hot sauce. Eolhc keeps it simple with plain ramen every day. On Thursday, everyone returns to their normal Monday order.",
+  "exported_at": "2026-08-17T17:08:53.712821Z",
+  "puzzle_id": "sub_022",
+  "title": "\ud83e\udde9Hunt",
+  "narrative": "Treb likes to go hunting in his free time. In the marshy area behind his house, a flock of ducks likes to hang out. The green grass can sometimes make shooting the ducks difficult, as the ducks will hide behind them. Treb was lucky enough to snipe one duck. However, the shot startled the surrounding ducks, and the ones closest to the grass hid. Treb noticed one duck still sitting out. After getting two ducks, he collects his stuff and leaves. The remaining ducks emerge from the grass to discover only bloody puddles left of their friends.",
   "sequence": [
     {
       "position": 0,
       "grid": [
         [
-          3,
-          3,
           0,
-          4,
-          2
-        ],
-        [
-          4,
-          4,
           0,
-          2,
-          4
+          0,
+          3,
+          0
         ],
         [
           0,
-          0,
+          4,
           0,
           0,
           0
         ],
         [
-          3,
-          3,
+          0,
+          0,
           0,
           4,
-          4
+          0
         ],
         [
-          2,
-          4,
           0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
           4,
+          3,
+          0,
+          0,
           4
         ]
       ],
       "rows": 5,
       "cols": 5,
-      "label": "Mon."
+      "label": ""
     },
     {
       "position": 1,
       "grid": [
         [
-          3,
-          3,
           0,
-          4,
-          2
+          0,
+          0,
+          3,
+          0
         ],
         [
-          4,
-          4,
           0,
           2,
-          4
+          0,
+          0,
+          0
         ],
         [
           0,
@@ -73,40 +73,40 @@
           0
         ],
         [
-          9,
-          4,
           0,
-          4,
-          4
+          0,
+          0,
+          3,
+          0
         ],
         [
-          9,
-          4,
           0,
-          4,
+          3,
+          0,
+          0,
           4
         ]
       ],
       "rows": 5,
       "cols": 5,
-      "label": "Tues."
+      "label": ""
     },
     {
       "position": 2,
       "grid": [
         [
-          3,
-          3,
           0,
-          2,
-          2
+          0,
+          0,
+          3,
+          0
         ],
         [
-          3,
-          3,
           0,
           2,
-          2
+          0,
+          0,
+          0
         ],
         [
           0,
@@ -116,30 +116,30 @@
           0
         ],
         [
-          9,
-          3,
           0,
-          4,
-          4
+          0,
+          0,
+          3,
+          0
         ],
         [
-          9,
-          2,
           0,
-          4,
-          4
+          3,
+          0,
+          0,
+          2
         ]
       ],
       "rows": 5,
       "cols": 5,
-      "label": "Wed."
+      "label": ""
     },
     {
       "position": 3,
       "grid": null,
       "rows": 5,
       "cols": 5,
-      "label": "Thurs.",
+      "label": "",
       "masked": true
     }
   ],
@@ -149,39 +149,39 @@
   "answer_grids": {
     "3": [
       [
-        3,
-        3,
         0,
-        4,
-        2
+        0,
+        0,
+        3,
+        0
       ],
       [
-        4,
-        4,
         0,
         2,
-        4
-      ],
-      [
-        0,
-        0,
         0,
         0,
         0
       ],
       [
-        3,
-        3,
+        0,
+        0,
         0,
         4,
-        4
+        0
       ],
       [
-        2,
-        4,
         0,
+        0,
+        0,
+        3,
+        0
+      ],
+      [
         4,
-        4
+        3,
+        0,
+        0,
+        2
       ]
     ]
   },
@@ -194,15 +194,15 @@
   "stance_group": null,
   "stance": null,
   "status": "active",
-  "created_at": "2026-05-27 17:11:34",
+  "created_at": "2026-08-07 21:45:44",
   "variants": [
     {
-      "variant_id": 1023,
+      "variant_id": 1262,
       "variant": "original",
       "source_domain": null,
-      "narrative": "Four friends get lunch together every day. They go to a ramen place downtown and have particularities about their order. Terb gets the same thing every day, ramen with green onions on top. Niloc gets the same thing every day, ramen with hot sauce across the noodles. On Wednesday, Terb and Niloc treat themselves to extra green onions and extra hot sauce. Nosaj gets creative. Starting on Monday, he gets green onions with a little hot sauce. Tuesday, he gets a portion of dark meat with no other toppings. Like Terb and Niloc on Wednesday, Nosaj goes all out with half meat and a little green onions with hot sauce. Eolhc keeps it simple with plain ramen every day. On Thursday, everyone returns to their normal Monday order.",
+      "narrative": "Treb likes to go hunting in his free time. In the marshy area behind his house, a flock of ducks likes to hang out. The green grass can sometimes make shooting the ducks difficult, as the ducks will hide behind them. Treb was lucky enough to snipe one duck. However, the shot startled the surrounding ducks, and the ones closest to the grass hid. Treb noticed one duck still sitting out. After getting two ducks, he collects his stuff and leaves. The remaining ducks emerge from the grass to discover only bloody puddles left of their friends.",
       "generator": "human",
-      "created_at": "2026-05-27 17:11:34"
+      "created_at": "2026-08-07 21:45:44"
     }
   ],
   "classifications": [
@@ -251,8 +251,24 @@
       "variant_id": null,
       "grids_only": 0,
       "narrative_only": 0,
-      "both": 1,
-      "has_narc": 1
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": 1067,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
     }
   ],
   "ordering": [],

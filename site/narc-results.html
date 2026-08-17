@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NARC Comprehension Results</title>
+<script>
+  // Apply saved theme before paint to avoid a flash (shares the site's "theme" key).
+  (function () {
+    try {
+      var saved = localStorage.getItem("theme");
+      var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if ((saved || (prefersDark ? "dark" : "light")) === "light")
+        document.documentElement.dataset.theme = "light";
+    } catch (e) {}
+  })();
+</script>
+<style>
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel2: #1c2129;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --link: #58a6ff;
+  --accent: #3fb950;
+  --accent-glow: rgba(63,185,80,0.12);
+
+  /* Chart ink — recessive by design; data carries the emphasis. */
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --ink-muted: #898781;
+
+  /* Categorical slots 1-2, dark steps. Validated against this surface:
+     CVD ΔE 26.8, normal-vision ΔE 31.8, both >= 3:1 contrast. */
+  --series-1: #3987e5;   /* shape — "did it see WHERE things are" */
+  --series-2: #d95926;   /* color — "did it see WHAT COLOUR they are" */
+
+  /* Sequential blue ramp, 100 -> 700, for heatmap magnitude. */
+  --seq-100: #cde2fb; --seq-200: #9ec5f4; --seq-300: #6da7ec; --seq-400: #3987e5;
+  --seq-500: #256abf; --seq-600: #184f95; --seq-700: #0d366b;
+
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  --warning: #fab219;
+}
+[data-theme="light"] {
+  --bg: #ffffff;
+  --panel: #f6f8fa;
+  --panel2: #eef1f4;
+  --border: #d0d7de;
+  --text: #1f2328;
+  --muted: #636e7b;
+  --link: #0969da;
+  --accent: #1a7f37;
+  --accent-glow: rgba(26,127,55,0.08);
+
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --ink-muted: #898781;
+
+  /* Light steps of the same two hues. CVD ΔE 24.7, normal ΔE 33.6, both >= 3:1. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  --warning: #fab219;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  font-size: 15px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+
+header.rh { border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 22px;
+  display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+header.rh h1 { margin: 0 0 6px; font-size: 1.55rem; letter-spacing: -0.02em; }
+header.rh .sub { margin: 0; color: var(--muted); font-size: 0.88rem; max-width: 74ch; }
+header.rh .grow { flex: 1 1 320px; }
+a.back { color: var(--link); text-decoration: none; font-size: 0.82rem; }
+a.back:hover { text-decoration: underline; }
+.theme-toggle { background: var(--panel); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 0.8rem; }
+.theme-toggle:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-glow); }
+
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 18px 20px; margin-bottom: 20px; }
+.panel > h2 { margin: 0 0 4px; font-size: 1.02rem; letter-spacing: -0.01em; }
+.panel > .lede { margin: 0 0 16px; color: var(--muted); font-size: 0.83rem; max-width: 82ch; }
+
+/* ── Data-source bar ── */
+.src { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); }
+.src button, .src label.filebtn {
+  background: var(--panel2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; }
+.src button:hover, .src label.filebtn:hover { border-color: var(--accent); color: var(--accent); }
+.src input[type=file] { display: none; }
+.ok { color: var(--accent); }
+.bad { color: var(--critical); }
+
+/* ── Filters: one row above the charts ── */
+.filters { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+.filters .f { display: flex; flex-direction: column; gap: 4px; }
+.filters label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.filters select, .filters input {
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 9px; font-size: 0.84rem; min-width: 150px; font-family: inherit; }
+.filters .count { font-size: 0.8rem; color: var(--muted); padding-bottom: 7px; }
+
+/* ── Stat tiles ── */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 14px; }
+.tile { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+.tile .v { font-size: 1.85rem; font-weight: 650; line-height: 1.15; letter-spacing: -0.02em; }
+.tile .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 3px; }
+.tile .n { font-size: 0.75rem; color: var(--muted); margin-top: 5px; }
+
+/* ── Charts ── */
+.chart { overflow-x: auto; }
+.chart svg { display: block; max-width: 100%; height: auto; }
+/* Charts whose width grows with the data (many models, many puzzles) keep their
+   natural size and scroll inside their own box — shrinking them to fit turns the
+   axis labels into mush. The page body never scrolls sideways. */
+.chart-scroll { overflow-x: auto; padding-bottom: 4px; }
+.chart-scroll svg { display: block; max-width: none; }
+.facet { margin-bottom: 18px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.78rem; color: var(--muted); margin: 4px 0 12px; }
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.small-mult { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.sm-title { font-size: 0.8rem; font-weight: 600; margin: 0 0 2px; }
+.sm-note { font-size: 0.72rem; color: var(--muted); margin: 0 0 6px; }
+
+#tip { position: fixed; pointer-events: none; z-index: 50; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 0.78rem;
+  color: var(--text); box-shadow: 0 4px 14px rgba(0,0,0,0.35); max-width: 320px; display: none;
+  line-height: 1.45; }
+#tip b { color: var(--text); }
+#tip .m { color: var(--muted); }
+
+/* ── Tables ── */
+details.tbl { margin-top: 10px; }
+details.tbl > summary { cursor: pointer; font-size: 0.78rem; color: var(--muted); }
+details.tbl > summary:hover { color: var(--accent); }
+table.data { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 10px;
+  font-variant-numeric: tabular-nums; }
+table.data th { text-align: left; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--muted); font-weight: 600; padding: 6px 9px; border-bottom: 1px solid var(--border); }
+table.data td { padding: 5px 9px; border-bottom: 1px solid var(--border); }
+table.data tr:last-child td { border-bottom: none; }
+table.data td.num, table.data th.num { text-align: right; }
+.tbl-wrap { overflow-x: auto; }
+
+/* ── Drill-down ── */
+.runlist { max-height: 300px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.runrow { display: grid; grid-template-columns: 1.2fr 1.3fr 0.9fr auto auto; gap: 10px;
+  padding: 7px 11px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.79rem;
+  align-items: center; }
+.runrow:last-child { border-bottom: none; }
+.runrow:hover { background: var(--panel2); }
+.runrow.sel { background: var(--accent-glow); }
+.runrow .mono { font-variant-numeric: tabular-nums; color: var(--muted); }
+.badge { display: inline-block; font-size: 0.64rem; padding: 1px 7px; border-radius: 10px;
+  background: var(--panel2); color: var(--muted); border: 1px solid var(--border); }
+.badge.good { color: var(--good); border-color: var(--good); }
+.badge.bad { color: var(--critical); border-color: var(--critical); }
+.grids { display: flex; gap: 22px; flex-wrap: wrap; margin: 12px 0; }
+.gcell { }
+.gcell .lbl { font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; }
+table.grid { border-collapse: collapse; }
+table.grid td { width: 17px; height: 17px; padding: 0; border: 1px solid rgba(128,128,128,0.35); }
+table.grid td.wrong { outline: 2px solid var(--critical); outline-offset: -2px; }
+pre.raw { background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 10px 12px; overflow: auto; max-height: 320px; font-size: 0.74rem; white-space: pre-wrap;
+  word-break: break-word; color: var(--text); }
+details.blk { margin-top: 8px; }
+details.blk > summary { cursor: pointer; font-size: 0.78rem; color: var(--muted); }
+details.blk > summary:hover { color: var(--accent); }
+.empty { color: var(--muted); font-size: 0.85rem; padding: 10px 0; }
+.callout { background: var(--panel2); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0;
+  padding: 11px 14px; font-size: 0.82rem; color: var(--text); margin: 0 0 16px; }
+.callout .m { color: var(--muted); }
+code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; font-size: 0.86em; }
+</style>
+</head>
+<body>
+<div id="tip"></div>
+<div class="wrap">
+
+<header class="rh">
+  <div class="grow">
+    <h1>NARC Comprehension Results</h1>
+    <p class="sub">Can a vision model actually <em>read</em> a NARC puzzle — every frame, every dimension, every
+    colour — before we ask whether it can solve one? Each run is scored three ways: overall cell accuracy,
+    <strong>shape</strong> (did it see where things are) and <strong>colour</strong> (did it see what colour they are).</p>
+    <a class="back" href="index.html">← Back to Update Log</a>
+  </div>
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle light/dark theme">◐ Theme</button>
+</header>
+
+<div class="panel">
+  <div class="src" id="srcBar"></div>
+</div>
+
+<div class="panel">
+  <h2>Filters</h2>
+  <p class="lede">Every figure below reflects these filters.</p>
+  <div class="filters" id="filters"></div>
+</div>
+
+<div class="panel">
+  <h2>Headline</h2>
+  <p class="lede">Perception first: reconstruction is scored on the <em>visible</em> frames only, so it measures
+  reading with no solving mixed in. Solve rates count a run only when <em>every</em> masked frame matches exactly.</p>
+  <div class="tiles" id="tiles"></div>
+  <div id="baselineNote"></div>
+</div>
+
+<div class="panel">
+  <h2>Shape vs colour, per model</h2>
+  <p class="lede">The decomposition this project has needed since Week 3. One aggregate accuracy figure cannot tell
+  "sees the layout, misreads the palette" apart from "sees neither" — these two bars can. Shape is
+  background-vs-not over every cell; colour is digit correctness on the cells both the model and the truth call
+  foreground.</p>
+  <div class="legend">
+    <span><i style="background:var(--series-1)"></i>Shape — where</span>
+    <span><i style="background:var(--series-2)"></i>Colour — what</span>
+  </div>
+  <div class="chart" id="chartShapeColor"></div>
+  <details class="tbl"><summary>Table view</summary><div class="tbl-wrap" id="tblShapeColor"></div></details>
+</div>
+
+<div class="panel">
+  <h2>Colour confusion</h2>
+  <p class="lede">Which digits get mistaken for which, over every mis-read cell. Rows are the truth, columns are what
+  the model said; the diagonal is empty by construction. Week 4 left this as an open question — the palette has two
+  pairs that are confusable by design (<strong>1 blue</strong> vs <strong>8 lt.blue</strong>, and
+  <strong>5 gray</strong> vs <strong>0 black</strong>), and this is where that shows up or doesn't.</p>
+  <div class="chart" id="chartConfusion"></div>
+  <details class="tbl"><summary>Table view</summary><div class="tbl-wrap" id="tblConfusion"></div></details>
+</div>
+
+<div class="panel">
+  <h2>Does reading it well predict solving it?</h2>
+  <p class="lede">Each point is one puzzle. Horizontal: how faithfully that model reconstructed the visible frames.
+  Vertical: how close its blind solve came on the masked frames. If perception were the only bottleneck, points
+  would climb left-to-right.</p>
+  <div class="small-mult" id="chartScatter"></div>
+</div>
+
+<div class="panel">
+  <h2>Per-puzzle reconstruction accuracy</h2>
+  <p class="lede">Cell accuracy for every puzzle × model. Darker is better. A ✓ marks a puzzle that model also
+  blind-solved exactly.</p>
+  <div class="chart" id="chartHeatmap"></div>
+  <details class="tbl"><summary>Table view</summary><div class="tbl-wrap" id="tblHeatmap"></div></details>
+</div>
+
+<div class="panel">
+  <h2>How responses fail structurally</h2>
+  <p class="lede">Separate from whether the grids were <em>right</em>: was the response even well-formed? "Clean"
+  means it returned exactly the frames asked for, at the right dimensions, in order.
+  "Hallucinated masked frame" means it invented the frame it was explicitly told to skip.</p>
+  <div class="chart" id="chartFailures"></div>
+</div>
+
+<div class="panel">
+  <h2>What makes a puzzle hard</h2>
+  <p class="lede">Week 3 found that "dense, many-colour puzzles collapse almost entirely" on MARC. These test the
+  same claim on NARC: reconstruction accuracy against grid area and against how many distinct colours a puzzle uses.</p>
+  <div class="small-mult" id="chartDifficulty"></div>
+</div>
+
+<div class="panel">
+  <h2>Run detail</h2>
+  <p class="lede">Pick a run to see its grids against the truth, with wrong cells outlined, plus the exact prompt it
+  was sent.</p>
+  <div id="runPicker"></div>
+  <div id="runDetail"></div>
+</div>
+
+</div>
+
+<script>
+"use strict";
+
+// ─────────────────────────────────────────────────────────────────────────
+// Palette. ARC_COLORS is the puzzle's own encoding (data, not chart colour) and
+// matches generate_images.py / the baseline tool exactly.
+// ─────────────────────────────────────────────────────────────────────────
+const ARC_COLORS = ["#000000","#0074D9","#FF4136","#2ECC40","#FFDC00",
+                    "#AAAAAA","#F012BE","#FF851B","#ADD8E6","#870C25"];
+const ARC_NAMES = ["black","blue","red","green","yellow","gray","magenta","orange","lt.blue","maroon"];
+
+const SEQ = ["--seq-100","--seq-200","--seq-300","--seq-400","--seq-500","--seq-600","--seq-700"];
+const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const EXPERIMENTS = ["blind_solve", "reconstruct", "recon_solve"];
+const EXP_LABEL = { blind_solve: "Blind solve", reconstruct: "Reconstruct", recon_solve: "Reconstruct → solve" };
+
+// ─────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────
+const state = {
+  runs: [],          // rows from runs.csv
+  puzzles: [],       // rows from puzzles.csv
+  summary: null,     // summary.json
+  lite: null,        // runs-lite.jsonl, loaded lazily for the drill-down
+  filters: { model: "", puzzle: "", experiment: "", thinking: "", narrative: "" },
+  selectedRun: null,
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// CSV / JSONL parsing
+// ─────────────────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const rows = [];
+  let field = "", row = [], inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+    else if (c !== "\r") field += c;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  if (!rows.length) return [];
+  const head = rows.shift();
+  return rows.filter(r => r.length === head.length).map(r => {
+    const o = {};
+    head.forEach((h, i) => { o[h] = r[i]; });
+    return o;
+  });
+}
+
+const NUMERIC = new Set(["cells","correct","cell_acc","shape_acc","color_acc","color_pairs","fg_recall",
+  "fg_truth","bg_fp","bg_fn","missing_cells","n_frames_expected","n_frames_returned","frames_exact",
+  "frames_with_correct_dims","latency_ms","content_chars","reasoning_chars","total_cells","masked_cells",
+  "n_distinct_colors","narrative_chars","n_frames","n_masked"]);
+const BOOLEAN = new Set(["thinking","include_narrative","include_sizes","skipped","parsed",
+  "parse_needed_repair","truncated","solved","positions_exact_match","order_preserved","answered_all_masked"]);
+
+function coerce(row) {
+  const o = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (NUMERIC.has(k)) o[k] = v === "" ? null : Number(v);
+    else if (BOOLEAN.has(k)) o[k] = v === "" ? null : (v === "True" || v === "true");
+    else o[k] = v;
+  }
+  return o;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Loading — try the published copy first, fall back to a local folder picker
+// (a file:// page can't fetch its siblings).
+// ─────────────────────────────────────────────────────────────────────────
+async function tryFetchAll() {
+  const base = "data/narc/";
+  const get = async (name, kind) => {
+    const r = await fetch(base + name, { cache: "no-cache" });
+    if (!r.ok) throw new Error(name + ": HTTP " + r.status);
+    return kind === "json" ? r.json() : r.text();
+  };
+  const [runsText, summary] = await Promise.all([get("runs.csv"), get("summary.json", "json")]);
+  let puzzlesText = "";
+  try { puzzlesText = await get("puzzles.csv"); } catch { /* optional */ }
+  ingest({ runsText, summary, puzzlesText });
+}
+
+function ingest({ runsText, summary, puzzlesText, liteText }) {
+  if (runsText) state.runs = parseCSV(runsText).map(coerce);
+  if (summary) state.summary = summary;
+  if (puzzlesText) state.puzzles = parseCSV(puzzlesText).map(coerce);
+  if (liteText) {
+    state.lite = new Map();
+    liteText.split("\n").forEach(line => {
+      if (!line.trim()) return;
+      try { const r = JSON.parse(line); if (r.run_key) state.lite.set(r.run_key, r); } catch {}
+    });
+  }
+  buildFilters();
+  renderAll();
+}
+
+async function onLocalFiles(files) {
+  const byName = {};
+  for (const f of files) byName[f.name] = f;
+  const read = async (n) => (byName[n] ? byName[n].text() : "");
+  const runsText = await read("runs.csv");
+  const summaryText = await read("summary.json");
+  const puzzlesText = await read("puzzles.csv");
+  const liteText = await read("runs-lite.jsonl");
+  if (!runsText && !summaryText) {
+    srcStatus(`<span class="bad">No runs.csv or summary.json in that selection.</span>`);
+    return;
+  }
+  ingest({
+    runsText,
+    summary: summaryText ? JSON.parse(summaryText) : null,
+    puzzlesText, liteText,
+  });
+  srcStatus(`<span class="ok">Loaded ${state.runs.length} run(s)</span> from local files` +
+    (state.lite ? ` · ${state.lite.size} with full detail` : " · no runs-lite.jsonl, so run detail is unavailable"));
+}
+
+function srcStatus(html) { document.getElementById("srcStatus").innerHTML = html; }
+
+function renderSrcBar() {
+  document.getElementById("srcBar").innerHTML = `
+    <label class="filebtn">📁 Load results folder
+      <input type="file" id="srcFiles" multiple webkitdirectory directory />
+    </label>
+    <label class="filebtn">📄 Load individual files
+      <input type="file" id="srcPick" multiple accept=".csv,.json,.jsonl" />
+    </label>
+    <span id="srcStatus">Looking for <code>data/narc/</code>…</span>`;
+  const wire = (id) => document.getElementById(id).addEventListener("change", e => {
+    onLocalFiles(Array.from(e.target.files || []))
+      .catch(err => srcStatus(`<span class="bad">Could not read those files: ${esc(err.message || err)}</span>`));
+  });
+  wire("srcFiles"); wire("srcPick");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Filtering & aggregation
+// ─────────────────────────────────────────────────────────────────────────
+function filtered(extra) {
+  const f = state.filters;
+  return state.runs.filter(r => {
+    if (f.model && r.model !== f.model) return false;
+    if (f.puzzle && r.puzzle_id !== f.puzzle) return false;
+    if (f.experiment && r.experiment !== f.experiment) return false;
+    if (f.thinking !== "" && String(r.thinking) !== f.thinking) return false;
+    if (f.narrative !== "" && String(r.include_narrative) !== f.narrative) return false;
+    if (extra && !extra(r)) return false;
+    return true;
+  });
+}
+
+// Only rows that actually produced a scorable answer.
+const scorable = (rows) => rows.filter(r => !r.error && !r.skipped);
+
+// Cell-weighted, not run-averaged: a 600-cell puzzle should not count the same
+// as a 100-cell one.
+function weighted(rows, accKey, weightKey) {
+  let num = 0, den = 0;
+  for (const r of rows) {
+    const a = r[accKey], w = r[weightKey];
+    if (a === null || !w) continue;
+    num += a * w; den += w;
+  }
+  return den ? num / den : null;
+}
+const aggShape = (rows) => weighted(rows, "shape_acc", "cells");
+const aggColor = (rows) => weighted(rows, "color_acc", "color_pairs");
+const aggCell  = (rows) => weighted(rows, "cell_acc", "cells");
+
+function pctText(v, nd) { return v === null || v === undefined || Number.isNaN(v) ? "—" : v.toFixed(nd === undefined ? 1 : nd) + "%"; }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+const uniq = (xs) => Array.from(new Set(xs.filter(x => x !== "" && x !== null && x !== undefined))).sort();
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tooltip
+// ─────────────────────────────────────────────────────────────────────────
+const tip = document.getElementById("tip");
+function showTip(evt, html) {
+  tip.innerHTML = html;
+  tip.style.display = "block";
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  if (x + w > window.innerWidth - 8) x = evt.clientX - w - pad;
+  if (y + h > window.innerHeight - 8) y = evt.clientY - h - pad;
+  tip.style.left = Math.max(8, x) + "px";
+  tip.style.top = Math.max(8, y) + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+
+// Attach hover to any element carrying data-tip.
+function wireTips(root) {
+  root.querySelectorAll("[data-tip]").forEach(el => {
+    el.addEventListener("mousemove", e => showTip(e, el.getAttribute("data-tip")));
+    el.addEventListener("mouseleave", hideTip);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// SVG helpers
+// ─────────────────────────────────────────────────────────────────────────
+function svgEl(w, h, extra) {
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" ${extra || ""}>`;
+}
+// 4px rounded data-end anchored to the baseline: the rounded corners sit at the
+// value end only, so the bar still reads as measured from zero.
+function barPath(x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h);
+  if (h <= 0.5) return "";
+  return `M${x},${y + h} L${x},${y + rr} Q${x},${y} ${x + rr},${y} L${x + w - rr},${y} Q${x + w},${y} ${x + w},${y + rr} L${x + w},${y + h} Z`;
+}
+function hbarPath(x, y, w, h, r) {
+  const rr = Math.min(r, h / 2, w);
+  if (w <= 0.5) return "";
+  return `M${x},${y} L${x + w - rr},${y} Q${x + w},${y} ${x + w},${y + rr} L${x + w},${y + h - rr} Q${x + w},${y + h} ${x + w - rr},${y + h} L${x},${y + h} Z`;
+}
+// Sequential ramp lookup: t in 0..1 → one of the seven blue steps.
+function seqColor(t) {
+  if (t === null || Number.isNaN(t)) return "transparent";
+  const i = Math.max(0, Math.min(SEQ.length - 1, Math.round(t * (SEQ.length - 1))));
+  return cssVar(SEQ[i]);
+}
+// Ink that stays legible on a given ramp step.
+const seqInk = (t) => (t > 0.55 ? "#ffffff" : cssVar("--text"));
+
+// ─────────────────────────────────────────────────────────────────────────
+// Chart 1 — shape vs colour, grouped bars, faceted by experiment
+// ─────────────────────────────────────────────────────────────────────────
+function renderShapeColor() {
+  const host = document.getElementById("chartShapeColor");
+  const rows = scorable(filtered());
+  const models = uniq(rows.map(r => r.model));
+  const exps = EXPERIMENTS.filter(e => rows.some(r => r.experiment === e));
+  if (!models.length || !exps.length) { host.innerHTML = `<div class="empty">No scorable runs match these filters.</div>`; return; }
+
+  // Angle the model labels once there are enough of them to collide horizontally,
+  // and grow the bottom gutter to match so nothing is clipped.
+  const tilt = models.length > 4;
+  const PAD_L = 46, PAD_R = 16, PAD_T = 18;
+  const PAD_B = tilt ? 96 : 52;
+  const PANEL_H = 210 + (tilt ? 44 : 0);
+  const groupW = tilt ? 84 : 96, barW = 30, barGap = 2;   // 2px surface gap between adjacent bars
+  const panels = exps.map(exp => {
+    const w = PAD_L + PAD_R + Math.max(1, models.length) * groupW;
+    let bars = "", ticks = "", labels = "";
+    const plotH = PANEL_H - PAD_T - PAD_B;
+
+    for (let p = 0; p <= 100; p += 25) {
+      const y = PAD_T + plotH * (1 - p / 100);
+      ticks += `<line x1="${PAD_L}" y1="${y}" x2="${w - PAD_R}" y2="${y}" stroke="${cssVar("--grid")}" stroke-width="1"/>
+        <text x="${PAD_L - 7}" y="${y + 4}" text-anchor="end" font-size="10" fill="${cssVar("--ink-muted")}">${p}</text>`;
+    }
+    models.forEach((m, i) => {
+      const sub = rows.filter(r => r.model === m && r.experiment === exp);
+      const vals = [
+        { v: aggShape(sub), c: cssVar("--series-1"), name: "Shape" },
+        { v: aggColor(sub), c: cssVar("--series-2"), name: "Colour" },
+      ];
+      const gx = PAD_L + i * groupW + (groupW - (barW * 2 + barGap)) / 2;
+      vals.forEach((d, j) => {
+        const x = gx + j * (barW + barGap);
+        if (d.v === null) return;
+        const h = plotH * (d.v / 100);
+        const y = PAD_T + plotH - h;
+        const cells = d.name === "Shape" ? sub.reduce((s, r) => s + (r.cells || 0), 0)
+                                         : sub.reduce((s, r) => s + (r.color_pairs || 0), 0);
+        bars += `<path d="${barPath(x, y, barW, h, 4)}" fill="${d.c}"
+          data-tip="<b>${esc(m)}</b><br>${EXP_LABEL[exp]} · ${d.name}<br><b>${pctText(d.v)}</b> <span class='m'>over ${cells.toLocaleString()} cells</span>"/>
+          <text x="${x + barW / 2}" y="${y - 5}" text-anchor="middle" font-size="9.5" fill="${cssVar("--muted")}">${d.v.toFixed(0)}</text>`;
+      });
+      // Selective direct labels: the model name under each group.
+      const cx = PAD_L + i * groupW + groupW / 2;
+      const ly = PAD_T + plotH + 14;
+      const short = m.length > 22 ? m.slice(0, 21) + "…" : m;
+      labels += tilt
+        ? `<text x="${cx}" y="${ly}" text-anchor="end" font-size="10" fill="${cssVar("--muted")}"
+             transform="rotate(-35 ${cx} ${ly})" data-tip="${esc(m)}">${esc(short)}</text>`
+        : `<text x="${cx}" y="${ly + 4}" text-anchor="middle" font-size="10.5" fill="${cssVar("--muted")}"
+             data-tip="${esc(m)}">${esc(m.length > 15 ? m.slice(0, 14) + "…" : m)}</text>`;
+    });
+    return `<div class="facet">
+      <p class="sm-title">${EXP_LABEL[exp]}</p>
+      <p class="sm-note">${exp === "reconstruct" ? "perception only — visible frames" : "masked frames"}</p>
+      <div class="chart-scroll">${svgEl(w, PANEL_H)}
+        ${ticks}
+        <line x1="${PAD_L}" y1="${PAD_T + plotH}" x2="${w - PAD_R}" y2="${PAD_T + plotH}" stroke="${cssVar("--axis")}" stroke-width="1"/>
+        ${bars}${labels}
+        <text x="${PAD_L - 7}" y="${PAD_T - 6}" text-anchor="end" font-size="9" fill="${cssVar("--ink-muted")}">%</text>
+      </svg></div></div>`;
+  }).join("");
+
+  // Side by side while they fit; stacked full-width once the model count makes
+  // three panels too wide to read.
+  host.innerHTML = models.length > 3 ? panels : `<div class="small-mult">${panels}</div>`;
+  wireTips(host);
+
+  // Table view — the relief path, and the numbers themselves.
+  const t = [`<table class="data"><thead><tr><th>Model</th><th>Experiment</th>
+    <th class="num">Cell</th><th class="num">Shape</th><th class="num">Colour</th><th class="num">Cells</th></tr></thead><tbody>`];
+  models.forEach(m => exps.forEach(exp => {
+    const sub = rows.filter(r => r.model === m && r.experiment === exp);
+    if (!sub.length) return;
+    t.push(`<tr><td>${esc(m)}</td><td>${EXP_LABEL[exp]}</td>
+      <td class="num">${pctText(aggCell(sub))}</td><td class="num">${pctText(aggShape(sub))}</td>
+      <td class="num">${pctText(aggColor(sub))}</td>
+      <td class="num">${sub.reduce((s, r) => s + (r.cells || 0), 0).toLocaleString()}</td></tr>`);
+  }));
+  t.push("</tbody></table>");
+  document.getElementById("tblShapeColor").innerHTML = t.join("");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Chart 2 — colour confusion heatmap
+// ─────────────────────────────────────────────────────────────────────────
+function confusionMatrix() {
+  const s = state.summary;
+  if (!s || !s.confusion) return null;
+  const { model, experiment } = state.filters;
+  if (model && experiment && s.confusion.by_model_experiment) {
+    const m = s.confusion.by_model_experiment[`${model} | ${experiment}`];
+    if (m) return { m, scope: `${model} · ${EXP_LABEL[experiment]}` };
+  }
+  if (model && s.confusion.by_model && s.confusion.by_model[model]) {
+    return { m: s.confusion.by_model[model], scope: model };
+  }
+  return s.confusion.all ? { m: s.confusion.all, scope: "all models & experiments" } : null;
+}
+
+function renderConfusion() {
+  const host = document.getElementById("chartConfusion");
+  const got = confusionMatrix();
+  if (!got) { host.innerHTML = `<div class="empty">No confusion data — load a summary.json.</div>`; return; }
+  const { m, scope } = got;
+  const total = m.flat().reduce((a, b) => a + b, 0);
+  if (!total) { host.innerHTML = `<div class="empty">No mis-read cells in this slice — nothing to confuse.</div>`; return; }
+
+  // Scale by the largest off-diagonal count. Confusions are heavy-tailed, so a
+  // sqrt scale keeps the rare-but-real pairs visible instead of washing them out.
+  const max = Math.max(...m.flat());
+  // PAD_L has to clear the longest row label ("6 magenta") plus its swatch plus
+  // the rotated axis title, or they collide.
+  const CELL = 40, PAD_L = 112, PAD_T = 42, PAD_R = 16, PAD_B = 30;
+  const w = PAD_L + CELL * 10 + PAD_R, h = PAD_T + CELL * 10 + PAD_B;
+  let cells = "", heads = "";
+
+  for (let i = 0; i < 10; i++) {
+    const cx = PAD_L + i * CELL + CELL / 2;
+    heads += `<rect x="${PAD_L + i * CELL + 4}" y="${PAD_T - 20}" width="${CELL - 8}" height="13" rx="3"
+        fill="${ARC_COLORS[i]}" stroke="${cssVar("--axis")}" stroke-width="0.5"/>
+      <text x="${cx}" y="${PAD_T - 24}" text-anchor="middle" font-size="10" fill="${cssVar("--muted")}">${i}</text>`;
+    const cy = PAD_T + i * CELL + CELL / 2;
+    heads += `<rect x="${PAD_L - 20}" y="${PAD_T + i * CELL + 4}" width="13" height="${CELL - 8}" rx="3"
+        fill="${ARC_COLORS[i]}" stroke="${cssVar("--axis")}" stroke-width="0.5"/>
+      <text x="${PAD_L - 26}" y="${cy + 4}" text-anchor="end" font-size="10" fill="${cssVar("--muted")}">${i} ${ARC_NAMES[i]}</text>`;
+  }
+
+  for (let t = 0; t < 10; t++) {
+    for (let p = 0; p < 10; p++) {
+      const n = m[t][p];
+      const x = PAD_L + p * CELL, y = PAD_T + t * CELL;
+      if (t === p) {
+        cells += `<rect x="${x + 1}" y="${y + 1}" width="${CELL - 2}" height="${CELL - 2}" rx="4"
+          fill="none" stroke="${cssVar("--grid")}" stroke-width="1" stroke-dasharray="3 3"/>`;
+        continue;
+      }
+      const frac = max ? Math.sqrt(n / max) : 0;
+      const fill = n ? seqColor(frac) : "transparent";
+      cells += `<rect x="${x + 1}" y="${y + 1}" width="${CELL - 2}" height="${CELL - 2}" rx="4"
+        fill="${fill}" stroke="${cssVar("--grid")}" stroke-width="${n ? 0 : 1}"
+        data-tip="<b>${t} ${ARC_NAMES[t]}</b> read as <b>${p} ${ARC_NAMES[p]}</b><br>${n.toLocaleString()} cell(s) · ${(100 * n / total).toFixed(1)}% of all errors"/>`;
+      if (n && frac > 0.18) {
+        cells += `<text x="${x + CELL / 2}" y="${y + CELL / 2 + 4}" text-anchor="middle" font-size="10"
+          fill="${seqInk(frac)}" pointer-events="none">${n}</text>`;
+      }
+    }
+  }
+
+  host.innerHTML = `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">
+      Scope: <strong style="color:var(--text)">${esc(scope)}</strong> · ${total.toLocaleString()} mis-read cell(s)
+      ${state.filters.model && !state.filters.experiment ? "" : ""}
+    </div>
+    <div class="chart-scroll">${svgEl(w, h)}
+      <text x="${PAD_L + CELL * 5}" y="12" text-anchor="middle" font-size="10" fill="${cssVar("--ink-muted")}">model said →</text>
+      <text x="12" y="${PAD_T + CELL * 5}" text-anchor="middle" font-size="10" fill="${cssVar("--ink-muted")}"
+        transform="rotate(-90 12 ${PAD_T + CELL * 5})">truth was ↓</text>
+      ${heads}${cells}
+    </svg></div>`;
+  wireTips(host);
+
+  // Table: the top confusions, ranked — the actual takeaway.
+  const pairs = [];
+  for (let t = 0; t < 10; t++) for (let p = 0; p < 10; p++) if (t !== p && m[t][p]) pairs.push({ t, p, n: m[t][p] });
+  pairs.sort((a, b) => b.n - a.n);
+  document.getElementById("tblConfusion").innerHTML =
+    `<table class="data"><thead><tr><th>Truth</th><th>Read as</th><th class="num">Cells</th><th class="num">Share of errors</th></tr></thead><tbody>` +
+    pairs.slice(0, 25).map(x => `<tr>
+      <td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${ARC_COLORS[x.t]};margin-right:6px"></i>${x.t} ${ARC_NAMES[x.t]}</td>
+      <td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${ARC_COLORS[x.p]};margin-right:6px"></i>${x.p} ${ARC_NAMES[x.p]}</td>
+      <td class="num">${x.n.toLocaleString()}</td><td class="num">${(100 * x.n / total).toFixed(1)}%</td></tr>`).join("") +
+    `</tbody></table>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Chart 3 — perception → solving, small multiples (one panel per model)
+// ─────────────────────────────────────────────────────────────────────────
+function renderScatter() {
+  const host = document.getElementById("chartScatter");
+  const rows = scorable(filtered());
+  const models = uniq(rows.map(r => r.model));
+  if (!models.length) { host.innerHTML = `<div class="empty">No scorable runs match these filters.</div>`; return; }
+
+  const W = 300, H = 240, PAD_L = 40, PAD_R = 14, PAD_T = 12, PAD_B = 40;
+  const plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;
+
+  // A model only gets a panel if it has both halves of the pair for some puzzle.
+  // An empty axis frame reads as "measured, scored zero" — it isn't.
+  const withPoints = models.map(model => {
+    const pts = [];
+    uniq(rows.filter(r => r.model === model).map(r => r.puzzle_id)).forEach(pid => {
+      const rec = rows.find(r => r.model === model && r.puzzle_id === pid && r.experiment === "reconstruct");
+      const sol = rows.find(r => r.model === model && r.puzzle_id === pid && r.experiment === "blind_solve");
+      if (!rec || !sol || rec.cell_acc === null || sol.cell_acc === null) return;
+      pts.push({ pid, x: rec.cell_acc, y: sol.cell_acc, solved: sol.solved });
+    });
+    return { model, pts };
+  }).filter(d => d.pts.length);
+
+  if (!withPoints.length) {
+    host.innerHTML = `<div class="empty">No model has both a reconstruction and a blind solve for the same puzzle under these filters.</div>`;
+    return;
+  }
+  const dropped = models.length - withPoints.length;
+
+  host.innerHTML = withPoints.map(({ model, pts }) => {
+    let axes = "";
+    for (let p = 0; p <= 100; p += 25) {
+      const y = PAD_T + plotH * (1 - p / 100), x = PAD_L + plotW * (p / 100);
+      axes += `<line x1="${PAD_L}" y1="${y}" x2="${PAD_L + plotW}" y2="${y}" stroke="${cssVar("--grid")}" stroke-width="1"/>`;
+      axes += `<text x="${PAD_L - 6}" y="${y + 3.5}" text-anchor="end" font-size="9" fill="${cssVar("--ink-muted")}">${p}</text>`;
+      axes += `<text x="${x}" y="${PAD_T + plotH + 14}" text-anchor="middle" font-size="9" fill="${cssVar("--ink-muted")}">${p}</text>`;
+    }
+    const marks = pts.map(d => {
+      const cx = PAD_L + plotW * (d.x / 100), cy = PAD_T + plotH * (1 - d.y / 100);
+      // 2px surface ring so overlapping points stay countable.
+      return `<circle cx="${cx}" cy="${cy}" r="5.5" fill="${cssVar("--series-1")}"
+        stroke="${cssVar("--panel")}" stroke-width="2"
+        data-tip="<b>${esc(d.pid)}</b><br>reconstruction <b>${d.x.toFixed(1)}%</b><br>blind solve <b>${d.y.toFixed(1)}%</b>${d.solved ? "<br><b>solved exactly</b>" : ""}"/>` +
+        (d.solved ? `<circle cx="${cx}" cy="${cy}" r="9" fill="none" stroke="${cssVar("--good")}" stroke-width="2"/>` : "");
+    }).join("");
+
+    return `<div>
+      <p class="sm-title">${esc(model)}</p>
+      <p class="sm-note">${pts.length} puzzle(s) · green ring = solved exactly</p>
+      ${svgEl(W, H)}
+        ${axes}
+        <line x1="${PAD_L}" y1="${PAD_T + plotH}" x2="${PAD_L + plotW}" y2="${PAD_T + plotH}" stroke="${cssVar("--axis")}"/>
+        <line x1="${PAD_L}" y1="${PAD_T}" x2="${PAD_L}" y2="${PAD_T + plotH}" stroke="${cssVar("--axis")}"/>
+        ${marks}
+        <text x="${PAD_L + plotW / 2}" y="${H - 6}" text-anchor="middle" font-size="9.5" fill="${cssVar("--muted")}">reconstruction cell accuracy (%)</text>
+        <text x="11" y="${PAD_T + plotH / 2}" text-anchor="middle" font-size="9.5" fill="${cssVar("--muted")}"
+          transform="rotate(-90 11 ${PAD_T + plotH / 2})">blind-solve cell accuracy (%)</text>
+      </svg></div>`;
+  }).join("");
+
+  // Never drop coverage silently — say what was left out and why.
+  if (dropped) {
+    host.insertAdjacentHTML("beforeend",
+      `<div class="empty" style="grid-column:1/-1">${dropped} model(s) omitted — no puzzle with both a reconstruction and a blind solve.</div>`);
+  }
+  wireTips(host);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Chart 4 — puzzle × model reconstruction heatmap
+// ─────────────────────────────────────────────────────────────────────────
+function renderHeatmap() {
+  const host = document.getElementById("chartHeatmap");
+  const rows = scorable(filtered(r => r.experiment === "reconstruct"));
+  const models = uniq(rows.map(r => r.model));
+  const puzzles = uniq(rows.map(r => r.puzzle_id));
+  if (!models.length || !puzzles.length) { host.innerHTML = `<div class="empty">No reconstruction runs match these filters.</div>`; return; }
+
+  const solveRows = scorable(filtered(r => r.experiment === "blind_solve"));
+  const CW = 96, CH = 34, PAD_L = 168, PAD_T = 40, PAD_R = 14, PAD_B = 12;
+  const w = PAD_L + models.length * CW + PAD_R, h = PAD_T + puzzles.length * CH + PAD_B;
+  let cells = "", heads = "";
+
+  models.forEach((m, i) => {
+    const short = m.length > 15 ? m.slice(0, 14) + "…" : m;
+    heads += `<text x="${PAD_L + i * CW + CW / 2}" y="${PAD_T - 12}" text-anchor="middle" font-size="10"
+      fill="${cssVar("--muted")}" data-tip="${esc(m)}">${esc(short)}</text>`;
+  });
+
+  puzzles.forEach((pid, r) => {
+    const meta = state.puzzles.find(p => p.puzzle_id === pid);
+    const label = meta && meta.title ? `${meta.title}` : pid;
+    const short = label.length > 24 ? label.slice(0, 23) + "…" : label;
+    heads += `<text x="${PAD_L - 10}" y="${PAD_T + r * CH + CH / 2 + 4}" text-anchor="end" font-size="10"
+      fill="${cssVar("--muted")}" data-tip="${esc(pid)}${meta ? ` · ${meta.n_frames} frames · ${meta.rows}×${meta.cols}` : ""}">${esc(short)}</text>`;
+    models.forEach((m, i) => {
+      const run = rows.find(x => x.model === m && x.puzzle_id === pid);
+      const x = PAD_L + i * CW, y = PAD_T + r * CH;
+      if (!run || run.cell_acc === null) {
+        cells += `<rect x="${x + 1}" y="${y + 1}" width="${CW - 2}" height="${CH - 2}" rx="4" fill="none"
+          stroke="${cssVar("--grid")}" stroke-dasharray="3 3"/>`;
+        return;
+      }
+      const t = run.cell_acc / 100;
+      const solved = solveRows.some(s => s.model === m && s.puzzle_id === pid && s.solved);
+      cells += `<rect x="${x + 1}" y="${y + 1}" width="${CW - 2}" height="${CH - 2}" rx="4" fill="${seqColor(t)}"
+        data-tip="<b>${esc(pid)}</b><br>${esc(m)}<br>cell <b>${run.cell_acc.toFixed(1)}%</b> · shape ${pctText(run.shape_acc)} · colour ${pctText(run.color_acc)}<br><span class='m'>${(run.frames_exact || 0)}/${run.n_frames_expected} frames exact</span>"/>
+        <text x="${x + CW / 2}" y="${y + CH / 2 + 4}" text-anchor="middle" font-size="10.5" fill="${seqInk(t)}"
+          pointer-events="none">${run.cell_acc.toFixed(0)}%${solved ? " ✓" : ""}</text>`;
+    });
+  });
+
+  // Ramp legend — magnitude needs its scale shown.
+  const legend = SEQ.map((v, i) => `<i style="background:${cssVar(v)}"></i>`).join("");
+  host.innerHTML = `<div class="legend"><span>0% ${legend} 100%</span><span>✓ = also blind-solved exactly</span></div>
+    <div class="chart-scroll">${svgEl(w, h)}${heads}${cells}</svg></div>`;
+  wireTips(host);
+
+  const t = [`<table class="data"><thead><tr><th>Puzzle</th><th>Model</th><th class="num">Cell</th>
+    <th class="num">Shape</th><th class="num">Colour</th><th class="num">Frames exact</th></tr></thead><tbody>`];
+  puzzles.forEach(pid => models.forEach(m => {
+    const run = rows.find(x => x.model === m && x.puzzle_id === pid);
+    if (!run) return;
+    t.push(`<tr><td>${esc(pid)}</td><td>${esc(m)}</td><td class="num">${pctText(run.cell_acc)}</td>
+      <td class="num">${pctText(run.shape_acc)}</td><td class="num">${pctText(run.color_acc)}</td>
+      <td class="num">${run.frames_exact}/${run.n_frames_expected}</td></tr>`);
+  }));
+  t.push("</tbody></table>");
+  document.getElementById("tblHeatmap").innerHTML = t.join("");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Chart 5 — structural failure modes, horizontal bars
+// A single series: these are counts of mutually exclusive states, so identity is
+// carried by the axis labels, not by colour.
+// ─────────────────────────────────────────────────────────────────────────
+const FAILURE_LABEL = {
+  clean: "Clean — exactly the frames asked for",
+  extra_answers: "Answered positions it wasn't asked about",
+  wrong_dimensions: "Wrong grid dimensions",
+  wrong_frame_count: "Wrong number of frames",
+  missing_answer: "Didn't answer every masked frame",
+  hallucinated_masked_frame: "Invented the frame it was told to skip",
+  unparseable: "No parseable JSON",
+  api_error: "API error",
+  skipped: "Skipped (no reconstruction to solve from)",
+};
+
+function classifyFailure(r) {
+  if (r.error) return "api_error";
+  if (r.skipped) return "skipped";
+  if (!r.parsed) return "unparseable";
+  if (r.hallucinated_masked_frames) return "hallucinated_masked_frame";
+  if (r.experiment === "reconstruct") {
+    if (r.n_frames_returned !== r.n_frames_expected) return "wrong_frame_count";
+    if (r.frames_with_correct_dims !== r.n_frames_expected) return "wrong_dimensions";
+    return "clean";
+  }
+  if (r.answered_all_masked === false) return "missing_answer";
+  if (r.frames_with_correct_dims !== r.n_frames_expected) return "wrong_dimensions";
+  if (r.answered_extra_positions) return "extra_answers";
+  return "clean";
+}
+
+function renderFailures() {
+  const host = document.getElementById("chartFailures");
+  const rows = filtered();
+  if (!rows.length) { host.innerHTML = `<div class="empty">No runs match these filters.</div>`; return; }
+
+  const counts = {};
+  rows.forEach(r => { const k = classifyFailure(r); counts[k] = (counts[k] || 0) + 1; });
+  const order = Object.keys(FAILURE_LABEL).filter(k => counts[k]);
+  const max = Math.max(...order.map(k => counts[k]));
+
+  const PAD_L = 300, PAD_R = 60, BAR_H = 26, GAP = 8, PAD_T = 6, PAD_B = 6;
+  const w = 860, plotW = w - PAD_L - PAD_R;
+  const h = PAD_T + order.length * (BAR_H + GAP) + PAD_B;
+
+  const bars = order.map((k, i) => {
+    const y = PAD_T + i * (BAR_H + GAP);
+    const bw = plotW * (counts[k] / max);
+    const pct = 100 * counts[k] / rows.length;
+    // "Clean" is the only value with a different meaning, so it gets the
+    // success ink; everything else is one series.
+    const fill = k === "clean" ? cssVar("--good") : cssVar("--series-1");
+    return `<text x="${PAD_L - 12}" y="${y + BAR_H / 2 + 4}" text-anchor="end" font-size="11.5"
+        fill="${cssVar("--text")}">${esc(FAILURE_LABEL[k])}</text>
+      <path d="${hbarPath(PAD_L, y, bw, BAR_H, 4)}" fill="${fill}"
+        data-tip="<b>${esc(FAILURE_LABEL[k])}</b><br>${counts[k]} of ${rows.length} run(s) · ${pct.toFixed(1)}%"/>
+      <text x="${PAD_L + bw + 8}" y="${y + BAR_H / 2 + 4}" font-size="11" fill="${cssVar("--muted")}"
+        >${counts[k]} <tspan fill="${cssVar("--ink-muted")}">(${pct.toFixed(0)}%)</tspan></text>`;
+  }).join("");
+
+  host.innerHTML = `<div class="chart-scroll">${svgEl(w, h)}
+    <line x1="${PAD_L}" y1="${PAD_T}" x2="${PAD_L}" y2="${h - PAD_B}" stroke="${cssVar("--axis")}"/>
+    ${bars}</svg></div>`;
+  wireTips(host);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Chart 6 — what makes a puzzle hard
+// ─────────────────────────────────────────────────────────────────────────
+function renderDifficulty() {
+  const host = document.getElementById("chartDifficulty");
+  const rows = scorable(filtered(r => r.experiment === "reconstruct"));
+  if (!rows.length || !state.puzzles.length) {
+    host.innerHTML = `<div class="empty">${state.puzzles.length ? "No reconstruction runs match these filters." : "Load puzzles.csv to see puzzle-difficulty correlates."}</div>`;
+    return;
+  }
+
+  const specs = [
+    { key: "total_cells", label: "grid area (total cells across the sequence)" },
+    { key: "n_distinct_colors", label: "distinct colours used" },
+  ];
+
+  host.innerHTML = specs.map(spec => {
+    const pts = [];
+    rows.forEach(r => {
+      const meta = state.puzzles.find(p => p.puzzle_id === r.puzzle_id);
+      if (!meta || meta[spec.key] === null || r.cell_acc === null) return;
+      pts.push({ x: meta[spec.key], y: r.cell_acc, pid: r.puzzle_id, model: r.model, title: meta.title });
+    });
+    if (!pts.length) return `<div><p class="sm-title">${spec.label}</p><div class="empty">No overlap between runs and the manifest.</div></div>`;
+
+    const W = 340, H = 250, PAD_L = 42, PAD_R = 14, PAD_T = 12, PAD_B = 44;
+    const plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;
+    const xs = pts.map(p => p.x);
+    const xMin = 0, xMax = Math.max(...xs) * 1.08 || 1;
+
+    let axes = "";
+    for (let p = 0; p <= 100; p += 25) {
+      const y = PAD_T + plotH * (1 - p / 100);
+      axes += `<line x1="${PAD_L}" y1="${y}" x2="${PAD_L + plotW}" y2="${y}" stroke="${cssVar("--grid")}"/>
+        <text x="${PAD_L - 6}" y="${y + 3.5}" text-anchor="end" font-size="9" fill="${cssVar("--ink-muted")}">${p}</text>`;
+    }
+    for (let i = 0; i <= 4; i++) {
+      const v = xMin + (xMax - xMin) * i / 4;
+      const x = PAD_L + plotW * i / 4;
+      axes += `<text x="${x}" y="${PAD_T + plotH + 14}" text-anchor="middle" font-size="9" fill="${cssVar("--ink-muted")}">${Math.round(v)}</text>`;
+    }
+
+    const marks = pts.map(d => {
+      const cx = PAD_L + plotW * ((d.x - xMin) / (xMax - xMin));
+      const cy = PAD_T + plotH * (1 - d.y / 100);
+      return `<circle cx="${cx}" cy="${cy}" r="5" fill="${cssVar("--series-1")}" stroke="${cssVar("--panel")}" stroke-width="2"
+        data-tip="<b>${esc(d.title || d.pid)}</b><br>${esc(d.model)}<br>${spec.label}: <b>${d.x}</b><br>reconstruction <b>${d.y.toFixed(1)}%</b>"/>`;
+    }).join("");
+
+    return `<div>
+      <p class="sm-title">Accuracy vs ${spec.label}</p>
+      <p class="sm-note">${pts.length} point(s) — one per puzzle × model</p>
+      ${svgEl(W, H)}
+        ${axes}
+        <line x1="${PAD_L}" y1="${PAD_T + plotH}" x2="${PAD_L + plotW}" y2="${PAD_T + plotH}" stroke="${cssVar("--axis")}"/>
+        <line x1="${PAD_L}" y1="${PAD_T}" x2="${PAD_L}" y2="${PAD_T + plotH}" stroke="${cssVar("--axis")}"/>
+        ${marks}
+        <text x="${PAD_L + plotW / 2}" y="${H - 6}" text-anchor="middle" font-size="9.5" fill="${cssVar("--muted")}">${esc(spec.label)}</text>
+        <text x="11" y="${PAD_T + plotH / 2}" text-anchor="middle" font-size="9.5" fill="${cssVar("--muted")}"
+          transform="rotate(-90 11 ${PAD_T + plotH / 2})">reconstruction cell accuracy (%)</text>
+      </svg></div>`;
+  }).join("");
+  wireTips(host);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Headline tiles
+// ─────────────────────────────────────────────────────────────────────────
+function renderTiles() {
+  const host = document.getElementById("tiles");
+  const all = filtered();
+  const rows = scorable(all);
+  if (!rows.length) {
+    host.innerHTML = `<div class="empty">No scorable runs match these filters.</div>`;
+    document.getElementById("baselineNote").innerHTML = "";
+    return;
+  }
+  const rec = rows.filter(r => r.experiment === "reconstruct");
+  const blind = rows.filter(r => r.experiment === "blind_solve");
+  const rsolve = rows.filter(r => r.experiment === "recon_solve");
+  const solveRate = (xs) => xs.length ? 100 * xs.filter(r => r.solved).length / xs.length : null;
+  const framesExact = (xs) => {
+    const num = xs.reduce((s, r) => s + (r.frames_exact || 0), 0);
+    const den = xs.reduce((s, r) => s + (r.n_frames_expected || 0), 0);
+    return den ? 100 * num / den : null;
+  };
+
+  const tile = (v, k, n) => `<div class="tile"><div class="v">${v}</div><div class="k">${k}</div>${n ? `<div class="n">${n}</div>` : ""}</div>`;
+  host.innerHTML = [
+    tile(uniq(all.map(r => r.puzzle_id)).length, "Puzzles", `${uniq(all.map(r => r.model)).length} model(s) · ${all.length} run(s)`),
+    tile(pctText(aggCell(rec)), "Reconstruction accuracy", `${rec.reduce((s, r) => s + (r.cells || 0), 0).toLocaleString()} visible cells`),
+    tile(pctText(aggShape(rec)), "…of that, shape", "background vs not"),
+    tile(pctText(aggColor(rec)), "…of that, colour", "digit, on co-foreground cells"),
+    tile(pctText(framesExact(rec)), "Frames read perfectly", `${rec.reduce((s, r) => s + (r.frames_exact || 0), 0)} of ${rec.reduce((s, r) => s + (r.n_frames_expected || 0), 0)}`),
+    tile(pctText(solveRate(blind)), "Blind solve rate", `${blind.filter(r => r.solved).length} of ${blind.length} run(s)`),
+    tile(pctText(solveRate(rsolve)), "Reconstruct → solve", `${rsolve.filter(r => r.solved).length} of ${rsolve.length} run(s)`),
+  ].join("");
+
+  // The Week 8 yardstick: a NARC masked frame is often a near-copy of the frame
+  // before it, so a solve score means little without this number beside it.
+  const pids = uniq(all.map(r => r.puzzle_id));
+  const base = state.puzzles.filter(p => pids.includes(p.puzzle_id))
+    .map(p => parseFloat(String(p.pct_identical_to_prev_frame).split(";")[0]))
+    .filter(v => !Number.isNaN(v));
+  document.getElementById("baselineNote").innerHTML = base.length ? `
+    <div class="callout" style="margin-top:16px">
+      <strong>Read solve rates against the copy-the-previous-frame baseline.</strong>
+      <span class="m">Across these puzzles a masked frame is on average
+      <strong style="color:var(--text)">${(base.reduce((a, b) => a + b, 0) / base.length).toFixed(1)}%</strong> identical to the frame before it
+      (range ${Math.min(...base).toFixed(1)}–${Math.max(...base).toFixed(1)}%). A model that simply copies the previous
+      frame scores that much without reasoning at all — which is why Week 8's single exact solve was an anecdote,
+      not a finding.</span>
+    </div>` : "";
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Run drill-down
+// ─────────────────────────────────────────────────────────────────────────
+function renderRunPicker() {
+  const host = document.getElementById("runPicker");
+  const rows = filtered();
+  if (!rows.length) { host.innerHTML = `<div class="empty">No runs match these filters.</div>`; document.getElementById("runDetail").innerHTML = ""; return; }
+  const shown = rows.slice(0, 400);
+  host.innerHTML = `<div class="runlist">` + shown.map(r => {
+    const badge = r.error ? `<span class="badge bad">error</span>`
+      : r.skipped ? `<span class="badge">skipped</span>`
+      : r.experiment === "reconstruct" ? `<span class="badge">${pctText(r.cell_acc, 0)}</span>`
+      : `<span class="badge ${r.solved ? "good" : "bad"}">${r.solved ? "solved" : pctText(r.cell_acc, 0)}</span>`;
+    return `<div class="runrow${state.selectedRun === r.run_key ? " sel" : ""}" data-key="${esc(r.run_key)}">
+      <div>${esc(r.puzzle_id)}</div><div class="mono">${esc(r.model)}</div>
+      <div class="mono">${EXP_LABEL[r.experiment] || r.experiment}</div>
+      <div class="mono">shape ${pctText(r.shape_acc, 0)} · col ${pctText(r.color_acc, 0)}</div>
+      <div>${badge}</div></div>`;
+  }).join("") + `</div>` +
+    (rows.length > shown.length ? `<div class="empty">Showing the first ${shown.length} of ${rows.length}. Narrow the filters to see the rest.</div>` : "");
+
+  host.querySelectorAll(".runrow").forEach(el => el.addEventListener("click", () => {
+    state.selectedRun = el.dataset.key;
+    renderRunPicker();
+    renderRunDetail();
+    ensureLite();          // grids/prompts live in runs-lite.jsonl — fetch on demand
+  }));
+}
+
+// runs-lite.jsonl carries every grid and prompt and is much larger than runs.csv,
+// so it is fetched only once someone actually opens a run — not on page load.
+let litePromise = null;
+function ensureLite() {
+  if (state.lite || litePromise) return litePromise;
+  const host = document.getElementById("runDetail");
+  litePromise = fetch("data/narc/runs-lite.jsonl", { cache: "no-cache" })
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+    .then(text => {
+      state.lite = new Map();
+      text.split("\n").forEach(line => {
+        if (!line.trim()) return;
+        try { const rec = JSON.parse(line); if (rec.run_key) state.lite.set(rec.run_key, rec); } catch {}
+      });
+      renderRunDetail();
+    })
+    .catch(() => { litePromise = null; renderRunDetail(); });
+  host.innerHTML = `<div class="empty" style="margin-top:14px">Loading run detail…</div>`;
+  return litePromise;
+}
+
+function gridTable(grid, truth) {
+  if (!Array.isArray(grid) || !grid.length) return `<div class="empty">—</div>`;
+  return `<table class="grid">` + grid.map((row, r) => `<tr>` + row.map((v, c) => {
+    const n = Math.max(0, Math.min(9, parseInt(v, 10) || 0));
+    const t = truth && truth[r] !== undefined ? truth[r][c] : undefined;
+    const wrong = truth && t !== undefined && Number(t) !== Number(v);
+    return `<td class="${wrong ? "wrong" : ""}" style="background:${ARC_COLORS[n]}"
+      title="${r},${c} = ${n} ${ARC_NAMES[n]}${wrong ? ` (truth ${t})` : ""}"></td>`;
+  }).join("") + `</tr>`).join("") + `</table>`;
+}
+
+function renderRunDetail() {
+  const host = document.getElementById("runDetail");
+  if (!state.selectedRun) { host.innerHTML = `<div class="empty">Pick a run above.</div>`; return; }
+  const row = state.runs.find(r => r.run_key === state.selectedRun);
+  const lite = state.lite ? state.lite.get(state.selectedRun) : null;
+
+  if (!lite) {
+    host.innerHTML = `<div class="callout" style="margin-top:14px">
+      <strong>Grids and prompts live in <code>runs-lite.jsonl</code>.</strong>
+      <span class="m">This page loaded ${state.lite ? "that file, but it has no record for this run" : "only runs.csv / summary.json"}.
+      Load the results folder (or <code>runs-lite.jsonl</code> itself) with the buttons at the top to see the grid
+      comparison, the exact prompt, and the reasoning trace.</span></div>
+      ${row ? `<div class="tbl-wrap"><table class="data"><tbody>` +
+        Object.entries(row).filter(([, v]) => v !== "" && v !== null)
+          .map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("") +
+        `</tbody></table></div>` : ""}`;
+    return;
+  }
+
+  const perFrame = lite.per_frame || [];
+  const isRecon = lite.experiment === "reconstruct";
+  const truthMap = {};
+  if (isRecon) (lite.truth.visible_frames || []).forEach(f => { truthMap[String(f.position)] = f.grid; });
+  else Object.entries(lite.truth.answer_grids || {}).forEach(([k, g]) => { truthMap[k] = g; });
+  const predMap = isRecon ? ((lite.predicted || {}).frames || {}) : ((lite.predicted || {}).answers || {});
+
+  const gridsHtml = perFrame.map(f => {
+    const truth = truthMap[String(f.position)];
+    const pred = predMap[String(f.position)];
+    return `<div class="gcell">
+      <div class="lbl"><strong>Frame ${f.position}</strong> —
+        ${f.returned ? (f.exact ? `<span class="badge good">exact</span>` : `cell ${pctText(f.cell_acc, 0)} · shape ${pctText(f.shape_acc, 0)} · colour ${pctText(f.color_acc, 0)}`) : `<span class="badge bad">not returned</span>`}</div>
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <div><div class="lbl">Model</div>${gridTable(pred, truth)}</div>
+        <div><div class="lbl">Truth</div>${gridTable(truth, null)}</div>
+      </div></div>`;
+  }).join("");
+
+  const st = lite.structural || {};
+  const flags = [];
+  if (st.hallucinated_masked_frames && st.hallucinated_masked_frames.length) flags.push(`invented masked frame ${st.hallucinated_masked_frames.join(", ")}`);
+  if (st.missing_visible_frames && st.missing_visible_frames.length) flags.push(`missed frame ${st.missing_visible_frames.join(", ")}`);
+  if (st.order_preserved === false) flags.push("emitted frames out of order");
+  if (st.answered_extra_positions && st.answered_extra_positions.length) flags.push(`answered extra position ${st.answered_extra_positions.join(", ")}`);
+  if (lite.parsed === false) flags.push("no parseable JSON");
+
+  host.innerHTML = `
+    <div style="margin-top:14px;font-size:0.85rem">
+      <strong>${esc(lite.puzzle_id)}</strong> ${lite.title ? `— ${esc(lite.title)}` : ""} ·
+      <span class="mono">${esc(lite.model)}</span> · ${EXP_LABEL[lite.experiment] || lite.experiment}
+      <span class="badge">narr ${lite.include_narrative ? "on" : "off"}</span>
+      <span class="badge">${lite.thinking ? "thinking" : "no thinking"}</span>
+      ${lite.solved === true ? `<span class="badge good">SOLVED</span>` : ""}
+    </div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:4px">
+      cell <strong style="color:var(--text)">${pctText((lite.agg || {}).cell_acc)}</strong> ·
+      shape <strong style="color:var(--text)">${pctText((lite.agg || {}).shape_acc)}</strong> ·
+      colour <strong style="color:var(--text)">${pctText((lite.agg || {}).color_acc)}</strong>
+      ${flags.length ? ` · <span style="color:var(--warning)">${esc(flags.join(" · "))}</span>` : ""}
+    </div>
+    <div class="grids">${gridsHtml || `<div class="empty">No frames to show.</div>`}</div>
+    ${lite.narrative ? `<details class="blk"><summary>Narrative ${lite.include_narrative ? "(given to the model)" : "(withheld this run)"}</summary><pre class="raw">${esc(lite.narrative)}</pre></details>` : ""}
+    <details class="blk"><summary>Prompt sent</summary><pre class="raw">${esc(lite.prompt)}</pre></details>
+    ${lite.reasoning_preview ? `<details class="blk"><summary>Reasoning trace (${(lite.reasoning_chars || 0).toLocaleString()} chars${lite.reasoning_chars > lite.reasoning_preview.length ? ", truncated" : ""})</summary><pre class="raw">${esc(lite.reasoning_preview)}</pre></details>` : ""}
+    <details class="blk"><summary>Raw response (${(lite.raw_chars || 0).toLocaleString()} chars${lite.raw_chars > (lite.raw_preview || "").length ? ", truncated" : ""})</summary><pre class="raw">${esc(lite.raw_preview || "(empty)")}</pre></details>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Filters UI
+// ─────────────────────────────────────────────────────────────────────────
+function buildFilters() {
+  const host = document.getElementById("filters");
+  const sel = (id, label, opts, value) => `<div class="f"><label for="${id}">${label}</label>
+    <select id="${id}">${opts.map(o => `<option value="${esc(o.v)}"${o.v === value ? " selected" : ""}>${esc(o.t)}</option>`).join("")}</select></div>`;
+  const anyOpt = (t) => ({ v: "", t });
+
+  host.innerHTML =
+    sel("fModel", "Model", [anyOpt("All models"), ...uniq(state.runs.map(r => r.model)).map(v => ({ v, t: v }))], state.filters.model) +
+    sel("fPuzzle", "Puzzle", [anyOpt("All puzzles"), ...uniq(state.runs.map(r => r.puzzle_id)).map(v => ({ v, t: v }))], state.filters.puzzle) +
+    sel("fExp", "Experiment", [anyOpt("All experiments"), ...EXPERIMENTS.filter(e => state.runs.some(r => r.experiment === e)).map(v => ({ v, t: EXP_LABEL[v] }))], state.filters.experiment) +
+    sel("fThink", "Thinking", [anyOpt("Either"), { v: "true", t: "On" }, { v: "false", t: "Off" }], state.filters.thinking) +
+    sel("fNarr", "Narrative given", [anyOpt("Either"), { v: "true", t: "On" }, { v: "false", t: "Off" }], state.filters.narrative) +
+    `<div class="count" id="fCount"></div>`;
+
+  const bind = (id, key) => document.getElementById(id).addEventListener("change", e => {
+    state.filters[key] = e.target.value;
+    state.selectedRun = null;
+    renderAll();
+  });
+  bind("fModel", "model"); bind("fPuzzle", "puzzle"); bind("fExp", "experiment");
+  bind("fThink", "thinking"); bind("fNarr", "narrative");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Render everything
+// ─────────────────────────────────────────────────────────────────────────
+function renderAll() {
+  if (!state.runs.length) return;
+  const n = filtered().length;
+  const c = document.getElementById("fCount");
+  if (c) c.textContent = `${n} of ${state.runs.length} run(s)`;
+  renderTiles();
+  renderShapeColor();
+  renderConfusion();
+  renderScatter();
+  renderHeatmap();
+  renderFailures();
+  renderDifficulty();
+  renderRunPicker();
+  renderRunDetail();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Theme (shares the site's "theme" key)
+// ─────────────────────────────────────────────────────────────────────────
+document.getElementById("themeToggle").addEventListener("click", () => {
+  const nowLight = document.documentElement.dataset.theme === "light";
+  if (nowLight) delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = "light";
+  try { localStorage.setItem("theme", nowLight ? "dark" : "light"); } catch {}
+  renderAll();     // SVG colours are baked at render time, so repaint
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────────────────────────────────────
+renderSrcBar();
+tryFetchAll()
+  .then(() => srcStatus(`<span class="ok">Loaded ${state.runs.length} run(s)</span> from <code>data/narc/</code>` +
+    ` · <span class="m">grids and prompts load on demand when you open a run</span>`))
+  .catch(() => srcStatus(
+    `No published results found at <code>data/narc/</code>. ` +
+    `Generate them with <code>uv run code/scripts/narc_score.py --publish</code>, or load a results folder above.` +
+    ` <span class="m">(Opening this page as a <code>file://</code> URL also blocks the fetch — use the folder picker.)</span>`));
+</script>
+</body>
+</html>

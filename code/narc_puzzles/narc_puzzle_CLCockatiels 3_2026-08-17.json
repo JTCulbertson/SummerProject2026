@@ -1,0 +1,535 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:08:40.902255Z",
+  "puzzle_id": "CLCockatiels 3",
+  "title": "\ud83e\udde9Cockatiels 3",
+  "narrative": "Chloe has five cockatiels, and two of them live together. Every morning, they come out of their cages to fly and play. Suddenly, there was a clap of thunder. The cockatiels, who had been playing, were startled and screamed in fright, and all flew to hidden spots. Hearing the scream, Chloe opened the door to check on them, but she could not see a single cockatiel. After a while, they calmed down. Four of them returned to the middle of their cages to eat, while one particularly playful cockatiel was still in the center of the room.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": [
+        [
+          8,
+          8,
+          8,
+          0,
+          0,
+          0,
+          8,
+          8,
+          8
+        ],
+        [
+          4,
+          8,
+          4,
+          0,
+          0,
+          0,
+          8,
+          8,
+          8
+        ],
+        [
+          8,
+          8,
+          8,
+          0,
+          0,
+          0,
+          4,
+          8,
+          8
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          8,
+          8,
+          0,
+          0,
+          0,
+          8,
+          8,
+          8
+        ],
+        [
+          8,
+          4,
+          8,
+          0,
+          0,
+          0,
+          8,
+          8,
+          4
+        ],
+        [
+          8,
+          8,
+          8,
+          0,
+          0,
+          0,
+          8,
+          8,
+          8
+        ]
+      ],
+      "rows": 9,
+      "cols": 9,
+      "label": ""
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          8,
+          8,
+          8,
+          0,
+          0,
+          0,
+          8,
+          8,
+          8
+        ],
+        [
+          8,
+          8,
+          8,
+          0,
+          4,
+          0,
+          8,
+          8,
+          8
+        ],
+        [
+          8,
+          8,
+          8,
+          0,
+          0,
+          0,
+          8,
+          8,
+          8
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          8,
+          8,
+          8,
+          0,
+          0,
+          4,
+          8,
+          8,
+          8
+        ],
+        [
+          8,
+          8,
+          8,
+          0,
+          0,
+          0,
+          8,
+          8,
+          8
+        ],
+        [
+          8,
+          8,
+          8,
+          0,
+          0,
+          0,
+          8,
+          8,
+          8
+        ]
+      ],
+      "rows": 9,
+      "cols": 9,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": null,
+      "rows": 9,
+      "cols": 9,
+      "label": "",
+      "masked": true
+    },
+    {
+      "position": 3,
+      "grid": null,
+      "rows": 9,
+      "cols": 9,
+      "label": "",
+      "masked": true
+    }
+  ],
+  "masked_positions": [
+    2,
+    3
+  ],
+  "answer_grids": {
+    "2": [
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ],
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ],
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ],
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ],
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ]
+    ],
+    "3": [
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ],
+      [
+        8,
+        4,
+        8,
+        0,
+        0,
+        0,
+        8,
+        4,
+        8
+      ],
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ],
+      [
+        8,
+        4,
+        8,
+        0,
+        0,
+        0,
+        8,
+        4,
+        8
+      ],
+      [
+        8,
+        8,
+        8,
+        0,
+        0,
+        0,
+        8,
+        8,
+        8
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "draft",
+  "created_at": "2026-08-03 21:21:40",
+  "variants": [
+    {
+      "variant_id": 1255,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "Chloe has five cockatiels, and two of them live together. Every morning, they come out of their cages to fly and play. Suddenly, there was a clap of thunder. The cockatiels, who had been playing, were startled and screamed in fright, and all flew to hidden spots. Hearing the scream, Chloe opened the door to check on them, but she could not see a single cockatiel. After a while, they calmed down. Four of them returned to the middle of their cages to eat, while one particularly playful cockatiel was still in the center of the room.",
+      "generator": "human",
+      "created_at": "2026-08-03 21:21:40"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": 1060,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

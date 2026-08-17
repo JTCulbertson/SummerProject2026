@@ -1,5 +1,96 @@
 [
   {
+    "id": "week-9",
+    "date": "2026-08-17",
+    "version": "Week 9",
+    "title": "The Bottleneck Moved: 216 NARC Runs",
+    "tags": [
+      "Research",
+      "Results"
+    ],
+    "excerpt": "Six weeks of MARC work converged on one explanation — models read structure well and colour badly, and that perception gap is what stops them solving. The first full NARC sweep contradicts it. Colour reads at 98.7%, one model reconstructed every visible frame of all 24 puzzles perfectly — and solved none of them. Perception and solving turn out to be unrelated, and a heuristic with no model in it beats all three.",
+    "sections": [
+      {
+        "heading": "In Plain Terms",
+        "body": "<div class=\"callout\">We showed three AIs 24 little comic strips with one panel hidden, and asked two separate things: <em>copy back the panels you can see</em>, and <em>tell us what the hidden panel looks like</em>. They were almost perfect at copying — one model got every visible panel exactly right, all 68 of them. They were bad at guessing the hidden panel. And here is the part that matters: being good at copying did not make a model good at guessing. The best copier was the worst guesser. So the thing holding these models back is not their eyesight — it is that they do not know what should <strong>stay the same</strong>. Asked to continue a story, they redraw far more of the picture than the story actually changes.</div>"
+      },
+      {
+        "heading": "What Was Run",
+        "body": "Every NARC puzzle in the set — 24 of them — against three vision models (<code>qwen/qwen3.6-35b</code>, <code>qwen/qwen3.5-122b</code>, <code>google/gemma-4-31b</code>), through the Week 6/8 three-experiment battery: blind solve, reconstruct, and reconstruct-then-solve. <strong>216 runs, zero API errors, a 100% parse rate</strong>, 15 minutes wall clock. One canonical rendered image per puzzle, shared by every run. Thinking off (Week 4 measured it as harmful), narrative on, masked-frame sizes on. Zero failed requests is a first for this project and a direct consequence of the Week 4 streaming fix."
+      },
+      {
+        "heading": "Perception Is Close to Solved",
+        "body": "Reconstruction is scored on the <em>visible</em> frames only, so it measures reading with no reasoning mixed in. <code>qwen/qwen3.5-122b</code> reconstructed <strong>every visible frame of every puzzle, perfectly</strong> — 68 of 68, 100.00% cell accuracy. <code>qwen3.6-35b</code> managed 88.5%, <code>gemma-4-31b</code> 70.9%. Against Week 3 — 50.4% cell accuracy and <em>zero</em> perfect grids out of 14 on MARC — that is a different regime.<br/><br/><strong>The honest caveat:</strong> this is not a like-for-like win. These NARC puzzles are much smaller, a median of 100 total cells and 4 distinct colours against a MARC median of 405 visible cells. Some of the jump is the task; some is simply that there is less to read. Nothing below depends on which — the solving results are measured against these same easy-to-read puzzles."
+      },
+      {
+        "heading": "Colour Is Not the Bottleneck",
+        "body": "Scoring each grid twice — <strong>shape</strong> (background vs not, over every cell) and <strong>colour</strong> (digit correctness where model and truth agree something is present) — inverts the standing hypothesis. Shape reads at <strong>92.5%</strong>; colour at <strong>98.7%</strong>. Colour is the <em>better</em> channel, not the worse one. Only 14.2% of mistakes swap one real colour for another; the other 85.8% involve background — a cell that should have been empty, or should not have been.<br/><br/>Week 4 left an open item: <em>probe which colour pairs the model confuses</em>, and named two suspects on palette grounds. The confusion matrix settles both. <strong>Blue ↔ light blue: zero occurrences</strong>, across 1,689 blue and light-blue cells. Refuted outright. Black ↔ gray is the largest raw confusion, but black is 61.7% of every cell in the set, so raw counts mislead — normalised by how often each colour occurs, black errs on only 10.6% of its cells. The most-misread common colour is <strong>blue, at 34.8%</strong>, and it is lost to <em>black</em>, not to light blue. That is a foreground/background failure wearing a colour costume."
+      },
+      {
+        "heading": "Reading Well Does Not Predict Solving",
+        "body": "This is the result that reframes the project. Across 72 puzzle × model pairs, reconstruction accuracy and blind-solve accuracy are <strong>uncorrelated</strong>: r = −0.155, r² = 0.024 — perception explains 2% of solving. Checking within each model matters, since one odd model could fake a correlation; it is absent there too (gemma +0.019, qwen3.6 −0.184, qwen3.5 undefined because its reconstruction was 100% every single time).<br/><br/><div class=\"callout\">The cleanest single fact in the sweep: <strong><code>qwen/qwen3.5-122b</code> reconstructed all 24 puzzles perfectly and solved 0 of 24.</strong> Of the 53 runs across all models that hit 100% reconstruction, only 3 (5.7%) also produced a correct answer. Perfect eyesight, no answer.</div><br/>The chain experiment agrees: handing a model its own transcription and asking it to solve from text moved the median run by <strong>0.0 points</strong> — helped 25 runs, hurt 25, left 22 unchanged. Exactly what you would expect if perception were never the constraint."
+      },
+      {
+        "heading": "All Three Models Lose to a Heuristic",
+        "body": "Week 8 warned that a NARC masked frame is usually a near-copy of the one before it, and asked for that baseline beside every score. Here it is: across this set a masked frame is a median <strong>80% identical</strong> to its predecessor (range 25–96%). Against copy-the-previous-frame, the models beat it on only <strong>5 of 21</strong> puzzles, with a mean margin of <strong>−3.7 points</strong> and a median of −6.7. Exact blind solves: 5 of 72 (6.9%).<br/><br/>The telling split: on the <em>most</em> repetitive puzzles (≥85% identical) the models lose by <strong>11.0 points</strong>; on less repetitive ones they are level (+0.8). They do worst relative to the baseline exactly where the baseline is strongest. They are not copying and failing to add the twist — they are changing things that should have been left alone."
+      },
+      {
+        "heading": "What the Data Is Really Saying",
+        "body": "That suspicion is directly measurable. Compare each answer to the previous frame, and compare the <em>true</em> answer to the previous frame. The truth keeps 74.4% of the previous frame's cells. Every model keeps less: gemma 72.0% (over-editing by 2.4 points), qwen3.5-122b 65.2% (+9.2), qwen3.6-35b 58.2% (+16.1).<br/><br/><div class=\"callout\"><strong>The thesis:</strong> these models can see the scene. What they cannot do is hold it still. Asked to produce the next frame of a story, they rewrite a third to a half of the grid when the story only changed a fifth of it. NARC does not primarily test whether a model can read a picture — it tests whether it can make a <strong>minimal, targeted edit</strong> to a scene it has already read correctly. That is a different capability, and it is the one that is missing.</div><br/>A caveat on solve counts — 4, 1 and 0 are small numbers and do not track over-editing monotonically. The over-editing measurement is solid (23 observations per model, clear separation); treat “least over-editing wins” as a hypothesis this sweep suggests, not one it establishes."
+      },
+      {
+        "heading": "Predictions",
+        "items": [
+          "<strong>Greyscale re-encoding will not improve NARC solving.</strong> The Week 7 lab was built on the premise that colour is the bottleneck; colour reads at 98.7% with zero blue↔light-blue confusion, so there is almost no headroom. Expect a move smaller than run-to-run noise — and <em>reduced</em> reconstruction accuracy from removing a channel that currently works.",
+          "<strong>Scaling the model will not fix solving.</strong> The largest model tested is the best reader and the worst solver. Expect a bigger VLM to push reconstruction to a ceiling it has already reached and leave solving near the copy baseline. If it jumps on solving while perception stays flat, the over-editing account is wrong and should be abandoned.",
+          "<strong>The narrative is doing less than it appears.</strong> Every run here had the story switched on and still lost to a heuristic that reads no text at all. Expect the narrative-off ablation to move the solve rate only slightly. If accuracy collapses without it, that is the more interesting result — it would mean the models lean on language far more than on pixels.",
+          "<strong>NARC needs lower frame-to-frame similarity to discriminate.</strong> With 22 of 24 puzzles a median 80% copy of their predecessor, much of any NARC score is available without reasoning. Puzzles with more change per step will separate models far better than this set, which mostly separates them by how much unnecessary damage they do."
+        ]
+      },
+      {
+        "heading": "Next Steps",
+        "body": "<div class=\"callout\">The research question has been stated since Week 3 — <em>does the metaphor/narrative clue help models solve?</em> — and has been blocked behind a perception problem the whole time. On NARC that block is gone: perception is good enough that it is no longer the limiting factor, so the question is finally askable. The uncomfortable part is that with the narrative <em>on</em>, all three models still lose to copy-the-previous-frame. The narrative-on/off ablation now measures something real instead of being swamped by perception noise, and it is one flag — that is the next run. <a href=\"report-week9.html\">Read the full Week 9 report →</a> &nbsp;·&nbsp; <a href=\"narc-results.html\">explore the interactive dashboard →</a></div>"
+      }
+    ]
+  },
+  {
+    "id": "week-8",
+    "date": "2026-07-20",
+    "version": "Week 8",
+    "title": "Reading the Story: NARC Joins the Baseline Tool",
+    "tags": [
+      "Tools",
+      "Research"
+    ],
+    "excerpt": "The Week 6 baseline tool could only score MARC puzzles. This week it learned NARC — narrative sequences where a short story plays out across an ordered strip of grids and one or more frames are hidden. The same three experiments now run on both — and after a NARC 'solve' that looked too good to be true, we added the controls needed to tell a real result from an easy one.",
+    "sections": [
+      {
+        "heading": "In Plain Terms",
+        "body": "<div class=\"callout\">A MARC puzzle gives the AI a few before-and-after examples and asks it to fill in one missing answer. A <strong>NARC</strong> puzzle is a little comic strip instead: several grids in a row show a scene changing step by step, with a written story describing what happens, and one panel is hidden behind a \"?\". The AI has to work out the missing panel from the story and the panels around it. This week our measuring tool learned to read those comic strips too. Then something surprising happened — on the very first try a model got a hidden panel <em>exactly</em> right, even though these same models struggle badly with MARC. Before celebrating we checked why, and the honest answer is less exciting than it looked. So we also built switches to make the test fair.</div>"
+      },
+      {
+        "heading": "Why Now",
+        "body": "Weeks 3–6 built a consistent picture of how models read MARC puzzles: shape almost perfectly, color only partially. NARC puzzles stress a different muscle — following an ordered sequence and tying it to a narrative — so bringing them onto the same measuring bench lets us compare the two kinds of reasoning through one scoring pipeline instead of two. The trigger was practical, too: NARC puzzles were being authored and visualized, but there was no way to put a model in front of one and score it. Extending the Week 6 tool rather than writing a new one means every NARC run is measured exactly like a MARC run, and lands in the same log."
+      },
+      {
+        "heading": "What Changed in the Tool",
+        "body": "The baseline tool now accepts both puzzle families and adapts to whichever it's given — it reads the JSON, figures out the kind, and prompts the model accordingly.<ul><li><strong>Auto-detects MARC vs. NARC</strong> — a NARC file (a <code>sequence</code> of frames plus a <code>narrative</code>) is rendered as an ordered strip: frames left-to-right with arrows between them, each masked frame drawn as a \"?\". MARC files behave exactly as before.</li><li><strong>NARC-aware prompting</strong> — the model is told the order of frames is the story and that there may be <em>more than one</em> masked frame, each identified by its position. It runs the same three experiments: blind solve, reconstruct, and reconstruct-then-solve.</li><li><strong>Per-frame scoring</strong> — every masked frame is scored against ground truth; a run counts as solved only if <em>all</em> masked frames match exactly.</li><li><strong>Image override</strong> — you can now swap in a custom image while keeping the same JSON, prompts, and scoring, so alternate representations (including the Week 7 greyscale encodings) can be tested head-to-head.</li><li><strong>Full prompt captured</strong> — each experiment records the exact prompt text sent, viewable in the run's details.</li></ul><p style=\"margin-top:0.8rem\">A rendering bug was also fixed: the shading on masked frames had been bleeding over neighboring grids. <a href=\"report-week8.html\">Read the full Week 8 report →</a></p>"
+      },
+      {
+        "heading": "The Result That Started It",
+        "body": "On the first NARC test a model <strong>blind-solved</strong> a hidden frame exactly — a sharp contrast with how much these models struggle to even reconstruct MARC grids. Tempting to call it a breakthrough; it isn't, and the numbers say why. A NARC masked frame is usually a near-copy of the frame just before it:<ul><li><strong>The Ghost of the Tortoise</strong> — 25 masked cells, 92% identical to the previous frame; only <strong>2 cells</strong> actually change.</li><li><strong>Stump</strong> — 150 masked cells, 87% identical; 20 change.</li></ul><p>The tortoise frame is the previous frame with two cells changed — and the narrative describes which two. That's \"copy the last panel, apply a narrated tweak,\" not the abstract rule-induction MARC demands. Add that the written story can hand over the answer in plain language, and an exact solve says more about <em>low edit-distance plus a language shortcut</em> than about a model suddenly reading grids well. One easy puzzle is an anecdote, not a finding.</p>"
+      },
+      {
+        "heading": "Making the Test Fair",
+        "body": "To separate \"NARC is genuinely easier\" from \"the extras gave it away,\" the tool now exposes what the model is told besides the image, as two switches:<ul><li><strong>Include the narrative</strong> — off means the model solves from the frames alone. If accuracy collapses without the story, it was leaning on language, not pixels.</li><li><strong>Include masked-frame grid sizes</strong> — off means the model has to infer the output shape, putting NARC on the same footing as MARC blind-solve, which never gets a size hint.</li></ul><p>Both default on, both are recorded per run, and each run's card shows which were active — so a score can't be misread as more (or less) impressive than the inputs it was given.</p>"
+      },
+      {
+        "heading": "Next Steps",
+        "body": "<div class=\"callout\">With NARC on the bench and fair controls in place, the plan is to run the narrative-on / narrative-off comparison across several puzzles and models to quantify how much models lean on the story versus the grids — and to fold in the Week 7 greyscale encodings via the image override, testing whether a color-free representation changes the picture on sequences too. A copy-the-previous-frame baseline is the natural yardstick to report every NARC score against.</div>"
+      }
+    ]
+  },
+  {
     "id": "week-7",
     "date": "2026-07-15",
     "version": "Week 7",

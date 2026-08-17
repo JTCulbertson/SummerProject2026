@@ -1,0 +1,224 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:09:15.617750Z",
+  "puzzle_id": "sub_058",
+  "title": "\ud83e\udde9Pruning 04\uff084x4\uff0904masked",
+  "narrative": "Cindy is pruning a plant. First, she cuts the longest branch to half of its original length. Then, she trims the leftmost branch until it is the same length as the branch next to it. Finally, she cuts off one-third of the rightmost branch's length.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": [
+        [
+          0,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          4,
+          3
+        ],
+        [
+          9,
+          0,
+          4,
+          3
+        ],
+        [
+          9,
+          8,
+          4,
+          3
+        ]
+      ],
+      "rows": 4,
+      "cols": 4,
+      "label": ""
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3
+        ],
+        [
+          9,
+          0,
+          4,
+          3
+        ],
+        [
+          9,
+          8,
+          4,
+          3
+        ]
+      ],
+      "rows": 4,
+      "cols": 4,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3
+        ],
+        [
+          0,
+          0,
+          4,
+          3
+        ],
+        [
+          9,
+          8,
+          4,
+          3
+        ]
+      ],
+      "rows": 4,
+      "cols": 4,
+      "label": ""
+    },
+    {
+      "position": 3,
+      "grid": null,
+      "rows": 4,
+      "cols": 4,
+      "label": "",
+      "masked": true
+    }
+  ],
+  "masked_positions": [
+    3
+  ],
+  "answer_grids": {
+    "3": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        4,
+        3
+      ],
+      [
+        9,
+        8,
+        4,
+        3
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "draft",
+  "created_at": "2026-08-03 21:23:03",
+  "variants": [
+    {
+      "variant_id": 1257,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "Cindy is pruning a plant. First, she cuts the longest branch to half of its original length. Then, she trims the leftmost branch until it is the same length as the branch next to it. Finally, she cuts off one-third of the rightmost branch's length.",
+      "generator": "human",
+      "created_at": "2026-08-03 21:23:03"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 1,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

@@ -1,0 +1,276 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:08:45.980119Z",
+  "puzzle_id": "sub_006",
+  "title": "\ud83e\udde9Farm",
+  "narrative": "Farmer Treb struggled with a bug infestation on his blueberries. The bugs had diseased some of his crop. In hopes of still making quota, Treb harvested the berries that survived and trimmed branches to expose fresh blueberry branches that hadn't been infected. After all of the ripe blueberries were harvested, Treb went through and trimmed the rest of the bushes. With a clean slate, the following harvest yielded all healthy berries, no bugs in sight.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": null,
+      "rows": 5,
+      "cols": 5,
+      "label": "",
+      "masked": true
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          3,
+          0,
+          9,
+          0,
+          9
+        ],
+        [
+          0,
+          9,
+          0,
+          3,
+          0
+        ],
+        [
+          9,
+          0,
+          9,
+          0,
+          9
+        ],
+        [
+          0,
+          3,
+          0,
+          3,
+          0
+        ],
+        [
+          3,
+          0,
+          9,
+          0,
+          3
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": [
+        [
+          9,
+          0,
+          9,
+          0,
+          9
+        ],
+        [
+          0,
+          9,
+          0,
+          9,
+          0
+        ],
+        [
+          9,
+          0,
+          9,
+          0,
+          9
+        ],
+        [
+          0,
+          9,
+          0,
+          9,
+          0
+        ],
+        [
+          9,
+          0,
+          9,
+          0,
+          9
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": ""
+    },
+    {
+      "position": 3,
+      "grid": [
+        [
+          1,
+          0,
+          1,
+          0,
+          1
+        ],
+        [
+          0,
+          1,
+          0,
+          1,
+          0
+        ],
+        [
+          1,
+          0,
+          1,
+          0,
+          1
+        ],
+        [
+          0,
+          1,
+          0,
+          1,
+          0
+        ],
+        [
+          1,
+          0,
+          1,
+          0,
+          1
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": ""
+    }
+  ],
+  "masked_positions": [
+    0
+  ],
+  "answer_grids": {
+    "0": [
+      [
+        3,
+        0,
+        1,
+        0,
+        1
+      ],
+      [
+        0,
+        1,
+        0,
+        3,
+        0
+      ],
+      [
+        1,
+        0,
+        1,
+        0,
+        1
+      ],
+      [
+        0,
+        3,
+        0,
+        3,
+        0
+      ],
+      [
+        3,
+        0,
+        1,
+        0,
+        3
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "active",
+  "created_at": "2026-08-03 20:54:15",
+  "variants": [
+    {
+      "variant_id": 1246,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "Farmer Treb struggled with a bug infestation on his blueberries. The bugs had diseased some of his crop. In hopes of still making quota, Treb harvested the berries that survived and trimmed branches to expose fresh blueberry branches that hadn't been infected. After all of the ripe blueberries were harvested, Treb went through and trimmed the rest of the bushes. With a clean slate, the following harvest yielded all healthy berries, no bugs in sight.",
+      "generator": "human",
+      "created_at": "2026-08-03 20:54:15"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": 1033,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 9 — The Bottleneck Moved: 216 NARC Runs</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117; color: #e6edf3; padding: 24px 16px; line-height: 1.6;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back-link { display: inline-block; font-size: 0.82rem; color: #8b949e; margin-bottom: 18px; }
+    .back-link:hover { color: #e6edf3; }
+    .card {
+      background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+      padding: 22px 26px; margin-bottom: 20px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
+    h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 10px; color: #e6edf3; }
+    .meta-row { font-size: 0.8rem; color: #8b949e; display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+    .meta-row strong { color: #e6edf3; }
+    .tags { display: flex; gap: 6px; }
+    .tag { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px; background: rgba(188,140,255,0.15); color: #bc8cff; }
+    .sub { color: #c9d1d9; font-size: 0.95rem; }
+    p { margin-bottom: 0.8rem; }
+    p:last-child { margin-bottom: 0; }
+    code { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; font-size: 0.85em; font-family: "SF Mono", "Fira Code", monospace; }
+    .callout {
+      background: rgba(63,185,80,0.10); border-left: 3px solid #3fb950;
+      border-radius: 0 6px 6px 0; padding: 0.85rem 1.1rem; margin: 0.5rem 0 0.2rem;
+      font-size: 0.92rem; color: #e6edf3;
+    }
+    .callout.warn { background: rgba(210,153,34,0.10); border-left-color: #d29922; }
+    .callout.red  { background: rgba(248,81,73,0.10); border-left-color: #f85149; }
+    ul, ol { margin: 0.3rem 0 0.5rem 1.2rem; }
+    li { margin-bottom: 0.45rem; }
+    .cta {
+      display: inline-block; background: #238636; border: 1px solid #2ea043; color: #fff;
+      border-radius: 6px; padding: 0.55rem 1.1rem; font-weight: 600; font-size: 0.9rem; margin-top: 6px;
+    }
+    .cta:hover { background: #2ea043; text-decoration: none; }
+    .cta.alt { background: #1f6feb; border-color: #388bfd; }
+    .cta.alt:hover { background: #388bfd; }
+    .feature {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      padding: 14px 18px; margin-bottom: 12px;
+    }
+    .feature h3 { font-size: 0.95rem; margin-bottom: 5px; color: #bc8cff; }
+    .feature p { font-size: 0.9rem; margin: 0; color: #c9d1d9; }
+    .note { font-size: 0.82rem; color: #8b949e; }
+    .divider { border: none; border-top: 1px solid #30363d; margin: 4px 0 14px; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.4rem 0 0.2rem; }
+    table.data th, table.data td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #30363d; }
+    table.data th { color: #8b949e; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    table.data td.num, table.data th.num { font-variant-numeric: tabular-nums; text-align: right; }
+    .good { color: #3fb950; } .bad { color: #f85149; } .warn { color: #d29922; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 4px 0 6px; }
+    .tile { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 13px 15px; }
+    .tile .v { font-size: 1.5rem; font-weight: 650; letter-spacing: -0.02em; line-height: 1.2; }
+    .tile .k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e; margin-top: 3px; }
+    .tile .n { font-size: 0.74rem; color: #8b949e; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="index.html">← Summer Project 2026</a>
+
+  <div class="card">
+    <h1>Week 9 — The Bottleneck Moved: 216 NARC Runs</h1>
+    <div class="meta-row">
+      <span><strong>Aug 17, 2026</strong></span>
+      <span>24 puzzles · 3 models · 3 experiments · <strong>216 runs</strong></span>
+      <span class="tags"><span class="tag">Research</span><span class="tag">Results</span></span>
+    </div>
+    <p class="sub">Six weeks of MARC work converged on one explanation: models read puzzle <em>structure</em>
+    well and <em>colour</em> badly, and that perception gap is what stops them solving. The first full NARC
+    sweep tests that end to end — and contradicts it. Colour is read at <strong>98.7%</strong>. Perception is
+    close to solved. Solving is not, and the two turn out to be unrelated. Meanwhile a heuristic with no model
+    at all — copy the previous frame — beats every model we tested.</p>
+    <a class="cta alt" href="narc-results.html">Explore the full results dashboard →</a>
+  </div>
+
+  <div class="card">
+    <h2>In Plain Terms</h2>
+    <div class="callout">We showed three AIs 24 little comic strips where one panel is hidden, and asked two
+    separate things: <em>copy back the panels you can see</em>, and <em>tell us what the hidden panel looks
+    like</em>. They were almost perfect at copying — one model got every visible panel exactly right, all 68 of
+    them. They were bad at guessing the hidden panel. And here's the part that matters: being good at copying
+    did not make a model good at guessing. The best copier was the worst guesser. So the thing holding these
+    models back isn't their eyesight. It's that they don't know what should <em>stay the same</em> — asked to
+    continue a story, they redraw far more of the picture than the story actually changes.</div>
+  </div>
+
+  <div class="card">
+    <h2>What Was Run</h2>
+    <p>Every NARC puzzle in the set, against three vision models, through the Week 6/8 three-experiment battery.
+    One canonical rendered image per puzzle, shared by every run. Thinking off (Week 4 measured it as harmful),
+    narrative on, masked-frame sizes on.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">216</div><div class="k">Runs</div><div class="n">24 × 3 × 3</div></div>
+      <div class="tile"><div class="v good">0</div><div class="k">API errors</div><div class="n">100% parse rate</div></div>
+      <div class="tile"><div class="v">15 min</div><div class="k">Wall clock</div><div class="n">652 ms median latency</div></div>
+      <div class="tile"><div class="v">11,424</div><div class="k">Cells scored</div><div class="n">across all experiments</div></div>
+    </div>
+    <p class="note" style="margin-top:10px">Models: <code>qwen/qwen3.6-35b</code>, <code>qwen/qwen3.5-122b</code>,
+    <code>google/gemma-4-31b</code>. Zero failed requests and zero unparseable responses — a first for this
+    project, and a direct consequence of the Week 4 streaming fix.</p>
+  </div>
+
+  <div class="card">
+    <h2>Finding 1 — Perception is close to solved</h2>
+    <p>Reconstruction is scored on the <em>visible</em> frames only, so it measures reading with no reasoning
+    mixed in. Across 6,126 visible cells:</p>
+    <table class="data">
+      <thead><tr><th>Model</th><th class="num">Cell accuracy</th><th class="num">Frames exact</th><th class="num">Dimensions right</th></tr></thead>
+      <tbody>
+        <tr><td><code>qwen/qwen3.5-122b</code></td><td class="num good">100.00%</td><td class="num good">68 / 68</td><td class="num">97%</td></tr>
+        <tr><td><code>qwen/qwen3.6-35b</code></td><td class="num">88.54%</td><td class="num">59 / 68</td><td class="num">91%</td></tr>
+        <tr><td><code>google/gemma-4-31b</code></td><td class="num warn">70.86%</td><td class="num warn">38 / 68</td><td class="num warn">75%</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:0.8rem">qwen3.5-122b reconstructed <strong>every visible frame of every puzzle,
+    perfectly</strong>. Set against Week 3 — 50.4% cell accuracy and <em>zero</em> perfect grids out of 14 on
+    MARC — that is a different regime.</p>
+    <div class="callout warn"><strong>The honest caveat.</strong> This is not a like-for-like win over MARC.
+    NARC puzzles here are much smaller: a median of 100 total cells and 4 distinct colours, mostly 5×5 grids,
+    against a MARC median of 405 visible cells on 7×7–15×15 grids. Some of this jump is the task; some of it is
+    simply that there is less to read. What follows does not depend on which — the solving results are measured
+    against these same easy-to-read puzzles.</div>
+  </div>
+
+  <div class="card">
+    <h2>Finding 2 — Colour is not the bottleneck, and the named suspect is innocent</h2>
+    <p>Scoring each grid twice — <strong>shape</strong> (background vs not, over every cell) and
+    <strong>colour</strong> (digit correctness where model and truth agree something is present) — inverts the
+    standing hypothesis:</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">92.5%</div><div class="k">Shape</div><div class="n">where things are</div></div>
+      <div class="tile"><div class="v good">98.7%</div><div class="k">Colour</div><div class="n">what colour they are</div></div>
+      <div class="tile"><div class="v">85.8%</div><div class="k">Errors involving background</div><div class="n">of 1,702 mis-read cells</div></div>
+      <div class="tile"><div class="v good">0</div><div class="k">blue ↔ lt.blue confusions</div><div class="n">out of 1,689 such cells</div></div>
+    </div>
+    <p style="margin-top:10px">Colour reads <em>better</em> than shape, not worse. Only 14.2% of mistakes are one
+    real colour swapped for another; the other 85.8% are a cell that should have been background, or should not
+    have been.</p>
+    <p>Week 4 left an open item — <em>"probe which specific colour pairs the model confuses"</em> — and named two
+    suspects on palette grounds. The confusion matrix settles both. <strong>Blue <code>#0074D9</code> ↔ light
+    blue <code>#ADD8E6</code>: zero occurrences</strong>, across 1,689 blue and light-blue cells. Refuted
+    outright. Black ↔ gray is the largest raw confusion (500 cells, 29.4% of all errors) — but black is 61.7% of
+    every cell in the set, so raw counts mislead. Normalised by how often each colour actually occurs:</p>
+    <table class="data">
+      <thead><tr><th>Colour</th><th class="num">Cells in truth</th><th class="num">Misread</th><th class="num">Error rate</th></tr></thead>
+      <tbody>
+        <tr><td>2 red</td><td class="num">192</td><td class="num">85</td><td class="num bad">44.3%</td></tr>
+        <tr><td>1 blue</td><td class="num">882</td><td class="num">307</td><td class="num bad">34.8%</td></tr>
+        <tr><td>4 yellow</td><td class="num">537</td><td class="num">141</td><td class="num warn">26.3%</td></tr>
+        <tr><td>5 gray</td><td class="num">687</td><td class="num">155</td><td class="num warn">22.6%</td></tr>
+        <tr><td>8 lt.blue</td><td class="num">807</td><td class="num">91</td><td class="num">11.3%</td></tr>
+        <tr><td>0 black</td><td class="num">7,053</td><td class="num">751</td><td class="num good">10.6%</td></tr>
+        <tr><td>3 green</td><td class="num">519</td><td class="num">51</td><td class="num good">9.8%</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:0.8rem">Blue is the most-misread common colour — and it is lost to <em>black</em> (211
+    of its 307 errors), not to light blue. That is a foreground/background failure wearing a colour costume. The
+    model is not struggling to tell hues apart; it is struggling to decide where an object ends.</p>
+  </div>
+
+  <div class="card">
+    <h2>Finding 3 — Reading well does not predict solving. At all.</h2>
+    <p>This is the result that reframes the project. Across 72 puzzle × model pairs, reconstruction accuracy and
+    blind-solve accuracy are <strong>uncorrelated</strong>:</p>
+    <table class="data">
+      <thead><tr><th>Slice</th><th class="num">n</th><th class="num">Correlation (r)</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr><td>All pairs</td><td class="num">72</td><td class="num">−0.155</td><td>r² = 0.024 — perception explains 2% of solving</td></tr>
+        <tr><td><code>google/gemma-4-31b</code></td><td class="num">24</td><td class="num">+0.019</td><td>no relationship</td></tr>
+        <tr><td><code>qwen/qwen3.6-35b</code></td><td class="num">24</td><td class="num">−0.184</td><td>no relationship</td></tr>
+        <tr><td><code>qwen/qwen3.5-122b</code></td><td class="num">24</td><td class="num">undefined</td><td>reconstruction was 100% every time — zero variance</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:0.8rem">Checking within each model matters: a negative correlation across all pairs
+    could be one odd model rather than a real effect. It isn't — the relationship is absent inside each model too.</p>
+    <div class="callout red"><strong>The cleanest single fact in this sweep:</strong>
+    <code>qwen/qwen3.5-122b</code> reconstructed every visible frame of all 24 puzzles perfectly, and solved
+    <strong>0 of 24</strong>. Of the 53 runs across all models that achieved 100% reconstruction, only
+    <strong>3 (5.7%)</strong> also produced a correct answer. Perfect eyesight, no answer.</div>
+    <p style="margin-top:0.8rem">The chain experiment agrees. Handing a model its own transcription and asking it
+    to solve from text changed the median run by <strong>0.0 points</strong> — it helped 25 runs, hurt 25, and
+    left 22 unchanged. When perception is already near-perfect, removing the image changes nothing, which is
+    exactly what you would expect if perception were never the constraint.</p>
+  </div>
+
+  <div class="card">
+    <h2>Finding 4 — All three models lose to a heuristic with no model in it</h2>
+    <p>Week 8 warned that a NARC masked frame is usually a near-copy of the frame before it, and asked for that
+    baseline beside every score. Here it is. Across this set a masked frame is a median <strong>80%</strong>
+    identical to its predecessor (range 25–96%; 7 of 21 puzzles are ≥90% identical).</p>
+    <table class="data">
+      <thead><tr><th>Comparison</th><th class="num">Result</th></tr></thead>
+      <tbody>
+        <tr><td>Puzzles where a model beat copy-the-previous-frame</td><td class="num bad">5 of 21</td></tr>
+        <tr><td>Mean margin vs the baseline</td><td class="num bad">−3.7 points</td></tr>
+        <tr><td>Median margin</td><td class="num bad">−6.7 points</td></tr>
+        <tr><td>On the most repetitive puzzles (≥85% identical)</td><td class="num bad">−11.0 points</td></tr>
+        <tr><td>On less repetitive puzzles (&lt;85% identical)</td><td class="num">+0.8 points</td></tr>
+        <tr><td>Exact blind solves</td><td class="num">5 of 72 (6.9%)</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:0.8rem">Read that fourth row carefully. The models do <em>worst relative to the
+    baseline exactly where the baseline is strongest</em> — on the puzzles where almost nothing changes, they
+    lose by 11 points. They are not copying and failing to add the twist. They are changing things that should
+    have been left alone.</p>
+  </div>
+
+  <div class="card">
+    <h2>What the data is really saying: the models over-edit</h2>
+    <p>That suspicion is directly measurable. For each answer, compare it to the previous frame, and compare the
+    <em>true</em> answer to the previous frame. The truth keeps 74.4% of the previous frame's cells. Every model
+    keeps less:</p>
+    <table class="data">
+      <thead><tr><th>Model</th><th class="num">Truth keeps</th><th class="num">Model keeps</th><th class="num">Over-edit</th><th class="num">Exact solves</th></tr></thead>
+      <tbody>
+        <tr><td><code>google/gemma-4-31b</code></td><td class="num">74.4%</td><td class="num">72.0%</td><td class="num good">+2.4 pts</td><td class="num">4 / 24</td></tr>
+        <tr><td><code>qwen/qwen3.5-122b</code></td><td class="num">74.4%</td><td class="num">65.2%</td><td class="num warn">+9.2 pts</td><td class="num">0 / 24</td></tr>
+        <tr><td><code>qwen/qwen3.6-35b</code></td><td class="num">74.4%</td><td class="num">58.2%</td><td class="num bad">+16.1 pts</td><td class="num">1 / 24</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" style="margin-top:0.9rem"><strong>The thesis.</strong> These models can see the scene.
+    What they cannot do is hold it still. Asked to produce the next frame of a story, they rewrite a third to a
+    half of the grid when the story only changed a fifth of it. NARC does not primarily test whether a model can
+    read a picture — it tests whether a model can make a <em>minimal, targeted edit</em> to a scene it has
+    already read correctly. That is a different capability, and it is the one that is missing.</div>
+    <p style="margin-top:0.8rem" class="note">A caveat on the last column: 4, 1 and 0 solves are small numbers,
+    and the ordering of over-editing does not track them monotonically. The over-editing measurement itself is
+    solid — 23 observations per model with clear separation — but treat "least over-editing wins" as a
+    hypothesis this sweep suggests, not one it establishes.</p>
+  </div>
+
+  <div class="card">
+    <h2>Predictions</h2>
+    <p>Stated now, before the experiments that would test them, so they can be wrong in public.</p>
+    <div class="feature">
+      <h3>1 · Greyscale re-encoding will not improve NARC solving</h3>
+      <p>The Week 7 Greyscale Lab was built on the premise that colour is the bottleneck. On NARC, colour reads
+      at 98.7% and blue↔light-blue confusion is literally zero. There is almost no headroom for a colour-free
+      encoding to recover. Prediction: swapping in greyscale encodings via the image-override path moves the
+      NARC solve rate by less than the run-to-run noise, and <em>reduces</em> reconstruction accuracy by removing
+      a channel that currently works. Cheap to test — same JSON, same prompts, different image folder.</p>
+    </div>
+    <div class="feature">
+      <h3>2 · Scaling the model will not fix solving</h3>
+      <p>The largest model tested (122b) is the best reader in the set and the worst solver — perfect
+      reconstruction, zero solves. Prediction: a larger vision model pushes reconstruction to a ceiling it has
+      already effectively reached and leaves the solve rate near the copy-baseline. If a bigger model <em>does</em>
+      jump on solving while perception stays flat, the over-editing account is wrong and it should be abandoned.</p>
+    </div>
+    <div class="feature">
+      <h3>3 · The narrative is doing less than it appears</h3>
+      <p>Every run here had the story text switched on, and the models still lost to a heuristic that reads no
+      text at all. Prediction: the narrative-off ablation changes solve rate by a small margin — because the
+      narrative is not currently being converted into a targeted edit. This is the highest-value next run and it
+      is one flag: <code>--no-narrative</code>. If accuracy <em>does</em> collapse without it, that is the more
+      interesting result and it means the models lean on language far more than the pixels.</p>
+    </div>
+    <div class="feature">
+      <h3>4 · NARC needs lower frame-to-frame similarity to discriminate</h3>
+      <p>With 22 of 24 puzzles having a single masked frame that is a median 80% copy of its predecessor, a large
+      part of any NARC score is available without reasoning. Prediction: puzzles authored with more change per
+      step will separate models far better than the current set, which mostly separates them by how much
+      unnecessary damage they do. Every NARC number should carry the copy-baseline beside it — the dashboard now
+      does this automatically.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Where This Leaves the Project</h2>
+    <p>The research question has been stated since Week 3 as <em>does the metaphor/narrative clue help models
+    solve?</em>, and it has been blocked behind a perception problem the whole time. On NARC, that block is gone —
+    perception is good enough that it is no longer the limiting factor. The question is finally askable.</p>
+    <p>But the answer this sweep points toward is uncomfortable: with the narrative <em>on</em>, all three models
+    still lose to copy-the-previous-frame. Whatever the story is contributing, it is not yet enough to beat doing
+    nothing. The narrative-on/off ablation now measures something real rather than being swamped by perception
+    noise — and that is the next run.</p>
+    <p class="note" style="margin-top:0.8rem">Everything here is reproducible from the committed data:
+    <code>code/data/narc_baseline/runs.csv</code> (216 rows), <code>summary.json</code>, and the per-run grids in
+    <code>runs-lite.jsonl</code>. Metrics come from a single scorer, <code>code/scripts/narc_score.py</code>, with
+    a golden-value self-test; the browser tool and the headless runner are held to byte-identical prompts by
+    <code>code/tests/run_parity.sh</code>.</p>
+    <a class="cta alt" href="narc-results.html">Explore the results yourself →</a>
+    <a class="cta" href="https://github.com/JTCulbertson/SummerProject2026/tree/main/code/scripts">Pipeline source on GitHub →</a>
+    <p class="note" style="margin-top:0.9rem">Related: <a href="report-week8.html">Week 8 — NARC joins the baseline tool</a> ·
+    <a href="report-week7.html">Week 7 — Greyscale Pattern Lab</a> ·
+    <a href="report-week6.html">Week 6 — The three-way baseline</a></p>
+  </div>
+
+</div>
+</body>
+</html>

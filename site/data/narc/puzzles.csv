@@ -1,0 +1,25 @@
+puzzle_id,file,title,n_frames,masked_positions,n_masked,rows,cols,total_cells,masked_cells,n_distinct_colors,colors_used,narrative_chars,difficulty,creator,pct_identical_to_prev_frame,cells_changed_from_prev,image
+Ballerina 4,narc_puzzle_Ballerina 4_2026-08-17.json,🧩Ballerina 4,5,3,1,5,5,125,25,3,0; 2; 8,647,,human,52.0,12,Ballerina 4.png
+CLCockatiels 3,narc_puzzle_CLCockatiels 3_2026-08-17.json,🧩Cockatiels 3,4,2; 3,2,9,9,324,162,3,0; 4; 8,535,,human,93.8; 93.8,5; 5,CLCockatiels 3.png
+narc8,narc_puzzle_narc8_2026-08-17.json,🧩Energy,4,3,1,5,5,100,25,3,0; 1; 4,165,,human,28.0,18,narc8.png
+sub_006,narc_puzzle_sub_006_2026-08-17.json,🧩Farm,4,0,1,5,5,100,25,4,0; 1; 3; 9,453,,human,,,sub_006.png
+sub_009,narc_puzzle_sub_009_2026-08-17.json,🧩Cloudy,4,3,1,7,7,196,49,6,0; 1; 2; 3; 4; 9,406,,human,65.3,17,sub_009.png
+sub_013,narc_puzzle_sub_013_2026-08-17.json,🧩Jumpy,4,2,1,5,5,100,25,6,0; 2; 3; 4; 5; 6,621,,human,96.0,1,sub_013.png
+sub_022,narc_puzzle_sub_022_2026-08-17.json,🧩Hunt,4,3,1,5,5,100,25,4,0; 2; 3; 4,543,,human,92.0,2,sub_022.png
+sub_025_tre_rev,narc_puzzle_sub_025_tre_rev_2026-08-17.json,🧩Crop4,4,3,1,3,3,36,9,4,0; 1; 2; 3,190,,human,88.9,1,sub_025_tre_rev.png
+sub_026,narc_puzzle_sub_026_2026-08-17.json,🧩Pinky,4,2,1,5,5,100,25,4,0; 3; 5; 6,785,,human,76.0,6,sub_026.png
+sub_032,narc_puzzle_sub_032_2026-08-17.json,🧩Play,4,2,1,5,5,100,25,4,0; 1; 4; 5,208,,human,80.0,5,sub_032.png
+sub_034_rev_rev,narc_puzzle_sub_034_rev_rev_2026-08-17.json,🧩Pinky6,4,0,1,3,3,36,9,4,0; 3; 5; 6,402,,human,,,sub_034_rev_rev.png
+sub_035,narc_puzzle_sub_035_2026-08-17.json,🧩Foreign Exchange Model,3,2,1,17,17,867,289,4,0; 1; 2; 5,708,,human,93.8,18,sub_035.png
+sub_041,narc_puzzle_sub_041_2026-08-17.json,🧩Flame,5,1,1,5,5,125,25,6,0; 2; 3; 4; 7; 9,263,,human,76.0,6,sub_041.png
+sub_044,narc_puzzle_sub_044_2026-08-17.json,🧩Apple,4,3,1,5,5,100,25,5,0; 1; 2; 3; 9,173,,human,92.0,2,sub_044.png
+sub_058,narc_puzzle_sub_058_2026-08-17.json,🧩Pruning 04（4x4）04masked,4,3,1,4,4,64,16,5,0; 3; 4; 8; 9,248,,human,93.8,1,sub_058.png
+sub_065,narc_puzzle_sub_065_2026-08-17.json,🧩The Fountain Show 05 （3x4）01 masked,3,0,1,4,3,36,12,5,0; 1; 2; 3; 8,498,,human,,,sub_065.png
+sub_086,narc_puzzle_sub_086_2026-08-17.json,🧩Penny's car 01 small ver.,3,2,1,10,1,30,10,2,4; 7,367,,human,80.0,2,sub_086.png
+sub_088,narc_puzzle_sub_088_2026-08-17.json,🧩Moka pot 01 small ver.,3,2,1,9,1,27,9,4,0; 7; 8; 9,454,,human,66.7,3,sub_088.png
+sub_090,narc_puzzle_sub_090_2026-08-17.json,🧩Carrot Patch 02 small ver.,4,3,1,2,6,48,12,3,0; 3; 7,190,,human,91.7,1,sub_090.png
+sub_095,narc_puzzle_sub_095_2026-08-17.json,🧩Bubble Level 04（9x1）,4,3,1,1,9,36,9,2,0; 2,468,,human,77.8,2,sub_095.png
+sub_096,narc_puzzle_sub_096_2026-08-17.json,🧩Elevator 01,5,4,1,5,5,125,25,3,0; 2; 5,408,,human,76.0,6,sub_096.png
+sub_101,narc_puzzle_sub_101_2026-08-17.json,"🧩Push-up 01 03,04masked",4,2; 3,2,2,4,32,16,2,0; 7,116,,human,25.0; 25.0,6; 6,sub_101.png
+sub_103,narc_puzzle_sub_103_2026-08-17.json,🧩Six cakes01  03 masked,3,2,1,2,3,18,6,2,0; 4,247,,human,66.7,2,sub_103.png
+sub_113,narc_puzzle_sub_113_2026-08-17.json,🧩Oil,4,2,1,5,5,100,25,5,0; 1; 4; 5; 9,157,,human,80.0,5,sub_113.png

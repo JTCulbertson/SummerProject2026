@@ -1,0 +1,180 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:09:18.018985Z",
+  "puzzle_id": "sub_065",
+  "title": "\ud83e\udde9The Fountain Show 05 \uff083x4\uff0901 masked",
+  "narrative": "Different buttons control different water jet heights. By pressing different combinations of buttons, different fountain patterns can be created. During the rehearsal, Walter sets the water jet controlled by the first button to 1 meter, the second button to 2 meters, and the third button to 3 meters. During the first actual performance, he presses the second, first, and third buttons in sequence. During the second actual performance, he presses the third, first, and second buttons in sequence.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": null,
+      "rows": 4,
+      "cols": 3,
+      "label": "",
+      "masked": true
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          0,
+          0,
+          8
+        ],
+        [
+          8,
+          0,
+          8
+        ],
+        [
+          8,
+          8,
+          8
+        ],
+        [
+          2,
+          1,
+          3
+        ]
+      ],
+      "rows": 4,
+      "cols": 3,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": [
+        [
+          8,
+          0,
+          0
+        ],
+        [
+          8,
+          0,
+          8
+        ],
+        [
+          8,
+          8,
+          8
+        ],
+        [
+          3,
+          1,
+          2
+        ]
+      ],
+      "rows": 4,
+      "cols": 3,
+      "label": ""
+    }
+  ],
+  "masked_positions": [
+    0
+  ],
+  "answer_grids": {
+    "0": [
+      [
+        0,
+        0,
+        8
+      ],
+      [
+        0,
+        8,
+        8
+      ],
+      [
+        8,
+        8,
+        8
+      ],
+      [
+        1,
+        2,
+        3
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "draft",
+  "created_at": "2026-08-03 21:18:58",
+  "variants": [
+    {
+      "variant_id": 1253,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "Different buttons control different water jet heights. By pressing different combinations of buttons, different fountain patterns can be created. During the rehearsal, Walter sets the water jet controlled by the first button to 1 meter, the second button to 2 meters, and the third button to 3 meters. During the first actual performance, he presses the second, first, and third buttons in sequence. During the second actual performance, he presses the third, first, and second buttons in sequence.",
+      "generator": "human",
+      "created_at": "2026-08-03 21:18:58"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

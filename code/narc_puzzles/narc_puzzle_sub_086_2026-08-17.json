@@ -1,0 +1,210 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:09:20.715986Z",
+  "puzzle_id": "sub_086",
+  "title": "\ud83e\udde9Penny's car 01 small ver.",
+  "narrative": "Penny's car has a 100-liter fuel tank. She starts her trip with the tank full of 89-octane gasoline. After using half of the fuel, she refills the tank with 91-octane gasoline. Later, after using 40 liters of the mixed fuel, she refills the tank to full again with 91-octane gasoline. Penny wants to know how much 89-octane and 91-octane gasoline are in the tank now.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": [
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ]
+      ],
+      "rows": 10,
+      "cols": 1,
+      "label": ""
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          7
+        ],
+        [
+          7
+        ],
+        [
+          7
+        ],
+        [
+          7
+        ],
+        [
+          7
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ],
+        [
+          4
+        ]
+      ],
+      "rows": 10,
+      "cols": 1,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": null,
+      "rows": 10,
+      "cols": 1,
+      "label": "",
+      "masked": true
+    }
+  ],
+  "masked_positions": [
+    2
+  ],
+  "answer_grids": {
+    "2": [
+      [
+        7
+      ],
+      [
+        7
+      ],
+      [
+        7
+      ],
+      [
+        7
+      ],
+      [
+        7
+      ],
+      [
+        7
+      ],
+      [
+        7
+      ],
+      [
+        4
+      ],
+      [
+        4
+      ],
+      [
+        4
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "draft",
+  "created_at": "2026-08-03 21:16:19",
+  "variants": [
+    {
+      "variant_id": 1250,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "Penny's car has a 100-liter fuel tank. She starts her trip with the tank full of 89-octane gasoline. After using half of the fuel, she refills the tank with 91-octane gasoline. Later, after using 40 liters of the mixed fuel, she refills the tank to full again with 91-octane gasoline. Penny wants to know how much 89-octane and 91-octane gasoline are in the tank now.",
+      "generator": "human",
+      "created_at": "2026-08-03 21:16:19"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

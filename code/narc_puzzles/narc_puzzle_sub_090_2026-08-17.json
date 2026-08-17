@@ -1,0 +1,192 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:09:27.873285Z",
+  "puzzle_id": "sub_090",
+  "title": "\ud83e\udde9Carrot Patch 02 small ver.",
+  "narrative": "Garrett has a carrot patch. He pulls up one carrot at a time, skipping one carrot between each one he pulls. Unlike the previous two times, this time he left the carrot tops where they were.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": [
+        [
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ]
+      ],
+      "rows": 2,
+      "cols": 6,
+      "label": ""
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          0,
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        [
+          0,
+          7,
+          7,
+          7,
+          7,
+          7
+        ]
+      ],
+      "rows": 2,
+      "cols": 6,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": [
+        [
+          0,
+          3,
+          0,
+          3,
+          3,
+          3
+        ],
+        [
+          0,
+          7,
+          0,
+          7,
+          7,
+          7
+        ]
+      ],
+      "rows": 2,
+      "cols": 6,
+      "label": ""
+    },
+    {
+      "position": 3,
+      "grid": null,
+      "rows": 2,
+      "cols": 6,
+      "label": "",
+      "masked": true
+    }
+  ],
+  "masked_positions": [
+    3
+  ],
+  "answer_grids": {
+    "3": [
+      [
+        0,
+        3,
+        0,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        7,
+        0,
+        7,
+        0,
+        7
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "draft",
+  "created_at": "2026-08-03 20:54:02",
+  "variants": [
+    {
+      "variant_id": 1245,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "Garrett has a carrot patch. He pulls up one carrot at a time, skipping one carrot between each one he pulls. Unlike the previous two times, this time he left the carrot tops where they were.",
+      "generator": "human",
+      "created_at": "2026-08-03 20:54:02"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

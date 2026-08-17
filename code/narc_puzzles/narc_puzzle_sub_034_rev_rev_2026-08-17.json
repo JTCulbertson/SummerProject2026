@@ -1,0 +1,196 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:09:04.216950Z",
+  "puzzle_id": "sub_034_rev_rev",
+  "title": "\ud83e\udde9Pinky6",
+  "narrative": "In a dish with bacteria, scientists are measuring the spread of the bacteria Pinky. Pinky begins to grow slowly in the corner of a dish. The opposite corner is surrounded by a separating wall and reserved for the competing bacteria, Verde. As Pinky has grown as much as it can, scientists place Verde in the protected corner. Overnight, Verde ate through the separating wall and destroyed all of Pinky.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": null,
+      "rows": 3,
+      "cols": 3,
+      "label": "",
+      "masked": true
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          6,
+          6,
+          0
+        ],
+        [
+          6,
+          5,
+          5
+        ],
+        [
+          0,
+          5,
+          0
+        ]
+      ],
+      "rows": 3,
+      "cols": 3,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": [
+        [
+          6,
+          6,
+          6
+        ],
+        [
+          6,
+          5,
+          5
+        ],
+        [
+          6,
+          5,
+          3
+        ]
+      ],
+      "rows": 3,
+      "cols": 3,
+      "label": ""
+    },
+    {
+      "position": 3,
+      "grid": [
+        [
+          3,
+          3,
+          3
+        ],
+        [
+          3,
+          3,
+          3
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ],
+      "rows": 3,
+      "cols": 3,
+      "label": ""
+    }
+  ],
+  "masked_positions": [
+    0
+  ],
+  "answer_grids": {
+    "0": [
+      [
+        6,
+        0,
+        0
+      ],
+      [
+        0,
+        5,
+        5
+      ],
+      [
+        0,
+        5,
+        0
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "active",
+  "created_at": "2026-08-07 22:01:39",
+  "variants": [
+    {
+      "variant_id": 1265,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "In a dish with bacteria, scientists are measuring the spread of the bacteria Pinky. Pinky begins to grow slowly in the corner of a dish. The opposite corner is surrounded by a separating wall and reserved for the competing bacteria, Verde. As Pinky has grown as much as it can, scientists place Verde in the protected corner. Overnight, Verde ate through the separating wall and destroyed all of Pinky.",
+      "generator": "human",
+      "created_at": "2026-08-07 22:01:39"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 1,
+      "narrative_only": 1,
+      "both": 1,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": 1092,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

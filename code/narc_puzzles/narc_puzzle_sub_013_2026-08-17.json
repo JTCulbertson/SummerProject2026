@@ -1,0 +1,276 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:08:51.164523Z",
+  "puzzle_id": "sub_013",
+  "title": "\ud83e\udde9Jumpy",
+  "narrative": "Treb adores his exotic pet frog, Chip. However, Chip can be a rascal to feed as he loves to jump and can be aggressive. While Chip was basking on top of his rock, Treb opened Chip's cage to deliver his daily worm. However, in classic Chip fashion, Chip jumps to his heat lamp, biting Treb on the way. \"Ouch!\" yelled Treb. Treb had broken skin and bled a little on Chip's rock. In a fury, Treb drops the worm in the tank and closes the tank loudly. Startling Chip, he hides behind his rock, his worm squirming on top. When Chip emerges, he enjoys his worm and licks the blood from the rock. He is an exotic frog after all.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": [
+        [
+          0,
+          0,
+          0,
+          4,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          5,
+          0,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          5,
+          0,
+          0
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": ""
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          0,
+          0,
+          0,
+          4,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          4
+        ],
+        [
+          0,
+          6,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          5,
+          0,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          2,
+          0,
+          0
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": null,
+      "rows": 5,
+      "cols": 5,
+      "label": "",
+      "masked": true
+    },
+    {
+      "position": 3,
+      "grid": [
+        [
+          0,
+          0,
+          0,
+          4,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          5,
+          0,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          5,
+          3,
+          0
+        ]
+      ],
+      "rows": 5,
+      "cols": 5,
+      "label": ""
+    }
+  ],
+  "masked_positions": [
+    2
+  ],
+  "answer_grids": {
+    "2": [
+      [
+        0,
+        0,
+        0,
+        4,
+        4
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        4
+      ],
+      [
+        0,
+        6,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        5,
+        0,
+        0,
+        0
+      ],
+      [
+        5,
+        5,
+        2,
+        0,
+        0
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "active",
+  "created_at": "2026-08-07 21:41:39",
+  "variants": [
+    {
+      "variant_id": 1261,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "Treb adores his exotic pet frog, Chip. However, Chip can be a rascal to feed as he loves to jump and can be aggressive. While Chip was basking on top of his rock, Treb opened Chip's cage to deliver his daily worm. However, in classic Chip fashion, Chip jumps to his heat lamp, biting Treb on the way. \"Ouch!\" yelled Treb. Treb had broken skin and bled a little on Chip's rock. In a fury, Treb drops the worm in the tank and closes the tank loudly. Startling Chip, he hides behind his rock, his worm squirming on top. When Chip emerges, he enjoys his worm and licks the blood from the rock. He is an exotic frog after all.",
+      "generator": "human",
+      "created_at": "2026-08-07 21:41:39"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 1,
+      "has_narc": 1
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": 1040,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}

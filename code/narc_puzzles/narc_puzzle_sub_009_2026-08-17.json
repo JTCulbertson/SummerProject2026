@@ -1,0 +1,388 @@
+{
+  "schema": "narc-export-v1",
+  "exported_at": "2026-08-17T17:08:48.270202Z",
+  "puzzle_id": "sub_009",
+  "title": "\ud83e\udde9Cloudy",
+  "narrative": "During a strange weather event where food falls from the sky, scientists observe the different behaviors of various foods. Looking at the ocean, scientists see that meatballs sink when they reach the water, as they are dense and heavy. But produce, such as bananas and other fruit, sit on the water's surface. Scientists see that bananas can also act as a boat, catching other food that lands on top of it.",
+  "sequence": [
+    {
+      "position": 0,
+      "grid": [
+        [
+          0,
+          0,
+          0,
+          0,
+          9,
+          9,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          9,
+          9,
+          9,
+          9
+        ],
+        [
+          0,
+          0,
+          0,
+          9,
+          9,
+          9,
+          9
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          9,
+          9,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      ],
+      "rows": 7,
+      "cols": 7,
+      "label": ""
+    },
+    {
+      "position": 1,
+      "grid": [
+        [
+          4,
+          0,
+          0,
+          4,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          9,
+          9,
+          0
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      ],
+      "rows": 7,
+      "cols": 7,
+      "label": ""
+    },
+    {
+      "position": 2,
+      "grid": [
+        [
+          0,
+          9,
+          9,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          9,
+          9,
+          0,
+          0,
+          0,
+          3
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          2
+        ],
+        [
+          4,
+          0,
+          0,
+          4,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      ],
+      "rows": 7,
+      "cols": 7,
+      "label": ""
+    },
+    {
+      "position": 3,
+      "grid": null,
+      "rows": 7,
+      "cols": 7,
+      "label": "",
+      "masked": true
+    }
+  ],
+  "masked_positions": [
+    3
+  ],
+  "answer_grids": {
+    "3": [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        9,
+        9,
+        0,
+        0,
+        0,
+        3
+      ],
+      [
+        4,
+        9,
+        9,
+        4,
+        0,
+        2,
+        2
+      ],
+      [
+        0,
+        4,
+        4,
+        0,
+        0,
+        2,
+        2
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    ]
+  },
+  "creator": "human",
+  "difficulty": "",
+  "human_difficulty": null,
+  "ai_difficulty": null,
+  "tags": null,
+  "parent_puzzle_id": null,
+  "stance_group": null,
+  "stance": null,
+  "status": "active",
+  "created_at": "2026-08-07 21:39:20",
+  "variants": [
+    {
+      "variant_id": 1260,
+      "variant": "original",
+      "source_domain": null,
+      "narrative": "During a strange weather event where food falls from the sky, scientists observe the different behaviors of various foods. Looking at the ocean, scientists see that meatballs sink when they reach the water, as they are dense and heavy. But produce, such as bananas and other fruit, sit on the water's surface. Scientists see that bananas can also act as a boat, catching other food that lands on top of it.",
+      "generator": "human",
+      "created_at": "2026-08-07 21:39:20"
+    }
+  ],
+  "classifications": [
+    {
+      "model_name": "gemma-4-26b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "gpt-oss-20b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "nemotron-3-super",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.5-122b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": null,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    },
+    {
+      "model_name": "qwen3.6-27b",
+      "variant_id": 1038,
+      "grids_only": 0,
+      "narrative_only": 0,
+      "both": 0,
+      "has_narc": 0
+    }
+  ],
+  "ordering": [],
+  "oddoneout": []
+}
