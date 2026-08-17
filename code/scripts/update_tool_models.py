@@ -17,7 +17,7 @@ from urllib.request import Request, urlopen
 
 REPO = Path(__file__).resolve().parents[2]
 KEYS = REPO / "code" / "keys.txt"
-TOOL = REPO / "site" / "model-baseline-analysis.html"
+TOOL = REPO / "code" / "tools" / "model-baseline-analysis.html"
 MODELS_URL = "https://mindrouter.uidaho.edu/v1/models"
 
 

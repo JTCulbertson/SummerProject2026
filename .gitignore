@@ -6,6 +6,10 @@ keys.txt
 __pycache__/
 *.pyc
 
+# NARC sweep archive — full reasoning traces, routinely tens of MB. The derived
+# runs.csv / runs-lite.jsonl / summary.json / puzzles.csv ARE committed.
+code/data/narc_baseline/results.jsonl
+
 # LaTeX aux files
 *.aux
 *.log

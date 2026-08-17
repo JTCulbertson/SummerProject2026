@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Model Baseline Analysis — MARC</title>
+<title>Model Baseline Analysis — MARC &amp; NARC</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -99,6 +99,24 @@ h3.exp-h .sub { font-weight: 400; font-size: 0.75rem; color: #8b949e; }
 
 .empty-note { color: #8b949e; font-size: 0.85rem; padding: 8px 0; }
 .section-links { font-size: 0.8rem; color: #8b949e; margin-top: 8px; }
+
+/* ── Batch sweep queue ── */
+.queue-wrap { max-height: 340px; overflow: auto; margin-top: 12px; border: 1px solid #30363d; border-radius: 6px; }
+table.queue { width: 100%; border-collapse: collapse; font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+table.queue th { position: sticky; top: 0; background: #161b22; color: #8b949e; text-align: left;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.66rem;
+  padding: 6px 8px; border-bottom: 1px solid #30363d; }
+table.queue td { padding: 5px 8px; border-bottom: 1px solid #21262d; color: #c9d1d9; }
+table.queue tr:last-child td { border-bottom: none; }
+table.queue tr.active td { background: #1c2530; }
+.q-state { font-weight: 600; }
+.q-pending { color: #6e7681; }
+.q-running { color: #d29922; }
+.q-done    { color: #3fb950; }
+.q-failed  { color: #f85149; }
+.q-skipped { color: #6e7681; font-style: italic; }
+.q-bar { height: 6px; background: #21262d; border-radius: 3px; overflow: hidden; margin-top: 10px; }
+.q-bar span { display: block; height: 100%; background: #3fb950; transition: width 0.2s; }
 </style>
 </head>
 <body>
@@ -106,8 +124,8 @@ h3.exp-h .sub { font-weight: 400; font-size: 0.75rem; color: #8b949e; }
 
   <header class="report-header">
     <h1>Model Baseline Analysis</h1>
-    <p class="sub">Measure a vision model's MARC-puzzle capability three ways — <strong>blind solve</strong>, <strong>reconstruct</strong>, and <strong>reconstruct-then-solve</strong> — score each against ground truth, and log the results.</p>
-    <a class="back" href="index.html">← Back to Update Log</a>
+    <p class="sub">Measure a vision model's puzzle capability three ways — <strong>blind solve</strong>, <strong>reconstruct</strong>, and <strong>reconstruct-then-solve</strong> — score each against ground truth, and log the results. Accepts both <strong>MARC</strong> (single masked test output) and <strong>NARC</strong> (narrative sequence, one or more masked frames) puzzles; the puzzle kind is auto-detected from the JSON and the model is prompted accordingly.</p>
+    <a class="back" href="../../site/index.html">← Back to Update Log</a>
   </header>
 
   <!-- 1. Configuration -->
@@ -146,17 +164,69 @@ h3.exp-h .sub { font-weight: 400; font-size: 0.75rem; color: #8b949e; }
   <div class="panel">
     <h2><span class="step">2.</span> Puzzle</h2>
     <div class="field">
-      <label>Puzzle JSON file (from <code>code/puzzles/</code>)</label>
+      <label>Puzzle JSON file — MARC (from <code>code/puzzles/</code>) or NARC (<code>code/narc_puzzles/</code>)</label>
       <input type="file" id="puzzleFile" accept=".json,application/json" />
     </div>
-    <div id="puzzleInfo" class="hint">The puzzle is rendered to an image in-browser (ARC palette + legend, test output hidden as “?”) — exactly what the model sees. The file also supplies the ground-truth answer used for scoring.</div>
+    <div id="puzzleInfo" class="hint">The puzzle is rendered to an image in-browser (ARC palette + legend, masked cells hidden as “?”) — exactly what the model sees. The file also supplies the ground-truth answer(s) used for scoring. <strong>MARC vs NARC is auto-detected</strong> (NARC = <code>schema: "narc-export-v1"</code> / a <code>sequence</code> array).</div>
+    <div class="btn-row" id="imageControls" style="display:none">
+      <button class="secondary" id="overrideImgBtn" type="button">🖼 Override image…</button>
+      <button class="secondary" id="useGeneratedBtn" type="button" style="display:none">↺ Use generated image</button>
+      <input type="file" id="overrideImgFile" accept="image/*" style="display:none" />
+      <span id="imageSource" class="hint" style="margin:0"></span>
+    </div>
+    <div id="narcOptions" style="display:none; margin-top:12px">
+      <label style="display:block; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:#8b949e; margin-bottom:6px">NARC solve inputs (what the model is told besides the image)</label>
+      <label class="check" style="margin-bottom:6px"><input type="checkbox" id="narcNarrative" checked /> Include the narrative <span style="color:#8b949e">— the story text. Off = solve from the frames alone (isolates how much the model leans on language vs. pixels).</span></label>
+      <label class="check"><input type="checkbox" id="narcSizes" checked /> Include masked-frame grid sizes <span style="color:#8b949e">— tells the model each masked grid's rows × cols. Off = the model must infer output shape (as MARC blind-solve does).</span></label>
+    </div>
     <div id="puzzlePreview"></div>
   </div>
 
-  <!-- 3. Run -->
+  <!-- 3. Batch sweep -->
   <div class="panel">
-    <h2><span class="step">3.</span> Run the Three Experiments</h2>
+    <h2><span class="step">3.</span> Batch Sweep <span style="font-size:0.75rem; font-weight:400; color:#8b949e">— NARC only</span></h2>
     <div class="callout">
+      Runs the same three experiments over <strong>every puzzle × every model</strong>, appending one JSON line per
+      experiment straight to disk. Scoring is <em>not</em> done here — feed the results file to
+      <code>uv run code/scripts/narc_score.py</code>, which is the single place metrics are computed, so a batch run
+      from this page and one from <code>run_narc_sweep.py</code> are graded by identical code.
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Puzzle folder — pick <code>code/narc_puzzles/</code></label>
+        <input type="file" id="batchPuzzleDir" multiple webkitdirectory directory />
+      </div>
+      <div class="field">
+        <label>Image folder (optional) — pick <code>code/narc_images/</code></label>
+        <input type="file" id="batchImageDir" multiple webkitdirectory directory />
+      </div>
+    </div>
+    <div class="field">
+      <label>Models — one id per line</label>
+      <textarea id="batchModels" rows="3" placeholder="qwen/qwen3.6-35b&#10;google/gemma-4-31b"
+        style="width:100%; font-family:ui-monospace,monospace; font-size:0.85rem; background:#0d1117; color:#e6edf3; border:1px solid #30363d; border-radius:6px; padding:8px"></textarea>
+    </div>
+    <label class="check" style="margin-bottom:6px"><input type="checkbox" id="batchSkipDone" checked /> Skip experiments already in the loaded results file <span style="color:#8b949e">— same resume key as the Python runner, so either can finish the other's sweep.</span></label>
+    <div class="btn-row" style="margin-bottom:6px">
+      <button class="secondary" id="batchResumeBtn" type="button">⤺ Load existing results.jsonl (resume)</button>
+      <input type="file" id="batchResumeFile" accept=".jsonl,.json" style="display:none" />
+    </div>
+    <div id="batchInfo" class="hint">Pick a puzzle folder to build the queue. Using the image folder makes every request byte-identical to the Python sweep; without it, images are rendered here instead.</div>
+    <div class="btn-row">
+      <button id="batchStart" type="button" disabled>▶ Start batch</button>
+      <button class="secondary" id="batchPause" type="button" style="display:none">⏸ Pause</button>
+      <button class="secondary" id="batchStop" type="button" style="display:none">⏹ Stop</button>
+      <button class="secondary" id="batchDownload" type="button" style="display:none">⬇ Download results.jsonl</button>
+      <span id="batchStatus" class="status-line"></span>
+    </div>
+    <div id="batchError" class="err"></div>
+    <div id="batchQueue"></div>
+  </div>
+
+  <!-- 4. Run -->
+  <div class="panel">
+    <h2><span class="step">4.</span> Run the Three Experiments <span style="font-size:0.75rem; font-weight:400; color:#8b949e">— single puzzle</span></h2>
+    <div class="callout" id="expCallout">
       <strong>1 · Blind solve</strong> — image → test output grid, no reconstruction.<br/>
       <strong>2 · Reconstruct</strong> — image → JSON, scored on visible cells (train grids + test input).<br/>
       <strong>3 · Reconstruct-then-solve</strong> — reuse the reconstruction, then solve from that JSON (text only).
@@ -168,9 +238,9 @@ h3.exp-h .sub { font-weight: 400; font-size: 0.75rem; color: #8b949e; }
     <div id="runError" class="err"></div>
   </div>
 
-  <!-- 4. Results -->
+  <!-- 5. Results -->
   <div class="panel">
-    <h2><span class="step">4.</span> Results &amp; Log</h2>
+    <h2><span class="step">5.</span> Results &amp; Log</h2>
     <div class="btn-row">
       <button class="secondary" id="downloadLog" type="button">⬇ Download log</button>
       <button class="secondary" id="loadLogBtn" type="button">⬆ Load log</button>
@@ -237,12 +307,64 @@ Respond with ONLY a JSON object in this exact format — no markdown, no explana
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// NARC prompts
+// A NARC puzzle is a *narrative sequence* of ARC-style grids. Unlike MARC (one
+// masked test output derived from train pairs), NARC:
+//   • is an ordered sequence — the left-to-right order of frames is the story,
+//   • may have MORE THAN ONE masked frame, each identified by its position index,
+//   • ships a natural-language narrative that the sequence depicts.
+// The model must realise it is filling in the missing step(s) of a story, using
+// both the narrative and the surrounding ordered frames.
+// ─────────────────────────────────────────────────────────────────────────
+// narrative: "" / null omits the story; dims: null omits the grid-size hint.
+function narcSolvePromptImage(narrative, maskedPositions, dims) {
+  const parts = [
+    `You are looking at a NARC puzzle — a NARRATIVE SEQUENCE of ARC-style grids rendered as an image, laid out left-to-right in order. The ORDER of the frames is the story: each grid is one step that follows from the previous ones. This is different from a standard ARC/MARC puzzle — there are no train→output pairs to generalise; instead you reason about how the scene evolves frame by frame.`,
+    `One or more frames are MASKED (drawn as "?"). Each masked frame is identified by its position index (shown in its label, e.g. "Frame 3"). You must produce the full grid for EVERY masked frame.`,
+  ];
+  if (narrative) parts.push(`The sequence depicts this narrative:\n"""\n${narrative}\n"""`);
+  const meta = [`Masked positions you must fill in: ${JSON.stringify(maskedPositions)}`];
+  if (dims) meta.push(`Grid size (rows × cols) for each masked position: ${JSON.stringify(dims)}`);
+  parts.push(meta.join("\n"));
+  parts.push(`${narrative ? "Study the ordered frames together with the narrative" : "Study the ordered frames"}, work out what happens at each masked step, and produce its grid. Respect the sequence order.${dims ? " Produce a grid of exactly the stated size for each masked position." : ""}\nGrids are 2D arrays of integers 0-9 (each integer is a color).`);
+  parts.push(`Respond with ONLY a JSON object mapping each masked position (as a string key) to its grid — no markdown, no explanation:\n{"answers": {"<position>": [[...], ...]}}`);
+  return parts.join("\n\n");
+}
+
+const NARC_RECOVER_PROMPT = `You are looking at a NARC puzzle — a NARRATIVE SEQUENCE of ARC-style grids rendered as an image, laid out left-to-right in order. Each frame has a position index shown in its label.
+
+Reconstruct the JSON of every VISIBLE frame exactly. Skip masked frames (drawn as "?") — do NOT invent them. Preserve the sequence order via each frame's position index.
+Grids are 2D arrays of integers 0-9.
+
+Respond with ONLY a JSON object in this exact format — no markdown, no explanation:
+{
+  "title": "<title string, or empty string if none>",
+  "sequence": [{"position": <int>, "grid": [[...], ...]}, ...]
+}`;
+
+// narrative: "" / null omits the story; dims: null omits the grid-size hint.
+function narcSolvePromptText(seqJsonStr, narrative, maskedPositions, dims) {
+  const parts = [
+    `Here is a NARC puzzle as JSON — a NARRATIVE SEQUENCE of ARC-style grids. The frames are ordered by their "position" index and the order is the story: each grid is one step that follows from the previous ones. One or more positions are MASKED and omitted from the sequence below; you must produce their grids.`,
+  ];
+  if (narrative) parts.push(`The sequence depicts this narrative:\n"""\n${narrative}\n"""`);
+  parts.push(`Visible frames (JSON, in order):\n${seqJsonStr}`);
+  const meta = [`Masked positions you must fill in: ${JSON.stringify(maskedPositions)}`];
+  if (dims) meta.push(`Grid size (rows × cols) for each masked position: ${JSON.stringify(dims)}`);
+  parts.push(meta.join("\n"));
+  parts.push(`${narrative ? "Using the narrative and the ordered visible frames" : "Using the ordered visible frames"}, infer what happens at each masked step and produce its full grid${dims ? " (exactly the stated size)" : ""}.\nGrids are 2D arrays of integers 0-9.`);
+  parts.push(`Respond with ONLY a JSON object mapping each masked position (as a string key) to its grid — no markdown, no explanation:\n{"answers": {"<position>": [[...], ...]}}`);
+  return parts.join("\n\n");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Small DOM helpers & config persistence
 // ─────────────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const LS = {
   base: "mba_baseUrl", key: "mba_apiKey", model: "mba_model",
   thinking: "mba_thinking", runs: "mba_runs", models: "mba_models",
+  narcNarrative: "mba_narcNarrative", narcSizes: "mba_narcSizes",
 };
 
 const DEFAULT_BASE = "http://localhost:8811/v1";
@@ -255,12 +377,17 @@ function loadConfig() {
   $("apiKey").value  = localStorage.getItem(LS.key)  || "";
   $("model").value   = localStorage.getItem(LS.model) || "";
   $("thinking").checked = localStorage.getItem(LS.thinking) === "1";
+  // NARC solve inputs default ON (preserves prior behaviour) unless explicitly turned off.
+  $("narcNarrative").checked = localStorage.getItem(LS.narcNarrative) !== "0";
+  $("narcSizes").checked     = localStorage.getItem(LS.narcSizes) !== "0";
 }
 function bindConfigPersistence() {
   $("baseUrl").addEventListener("change", e => localStorage.setItem(LS.base, e.target.value.trim()));
   $("apiKey").addEventListener("change",  e => localStorage.setItem(LS.key, e.target.value.trim()));
   $("model").addEventListener("change",   e => localStorage.setItem(LS.model, e.target.value.trim()));
   $("thinking").addEventListener("change", e => localStorage.setItem(LS.thinking, e.target.checked ? "1" : "0"));
+  $("narcNarrative").addEventListener("change", e => localStorage.setItem(LS.narcNarrative, e.target.checked ? "1" : "0"));
+  $("narcSizes").addEventListener("change", e => localStorage.setItem(LS.narcSizes, e.target.checked ? "1" : "0"));
 }
 const baseUrl = () => $("baseUrl").value.trim().replace(/\/+$/, "");
 const apiKey  = () => $("apiKey").value.trim();
@@ -315,7 +442,18 @@ async function refreshModels() {
 // Puzzle loading + canvas rendering (mirrors generate_images.py layout)
 // ─────────────────────────────────────────────────────────────────────────
 let currentPuzzle = null;      // parsed puzzle object
-let currentImageDataUrl = null; // data:image/png;base64,...
+let currentImageDataUrl = null; // data:image/png;base64,... — the image actually sent to the model
+let currentGeneratedImage = null; // the JSON-rendered image (kept so an override can be reverted)
+let overrideImageName = null;   // filename of an uploaded override, or null when using the generated image
+let currentKind = "marc";       // "marc" | "narc"
+
+// Detect NARC (narrative-sequence) vs MARC (train/test) from the JSON shape.
+function detectKind(p) {
+  if (!p || typeof p !== "object") return "marc";
+  if (p.schema === "narc-export-v1") return "narc";
+  if (Array.isArray(p.sequence)) return "narc";
+  return "marc";
+}
 
 function validatePuzzle(p) {
   if (!p || typeof p !== "object") return "not a JSON object";
@@ -323,6 +461,23 @@ function validatePuzzle(p) {
   if (!Array.isArray(p.test) || p.test.length === 0) return "missing 'test' array";
   if (!Array.isArray(p.test[0].input)) return "test[0].input is not a grid";
   if (!Array.isArray(p.test[0].output)) return "test[0].output missing — needed as ground truth to score solving";
+  return null;
+}
+
+// NARC ground-truth masked positions: prefer explicit masked_positions, else any
+// frame flagged masked. Every masked position needs an answer grid to be scorable.
+function narcMaskedPositions(p) {
+  if (Array.isArray(p.masked_positions) && p.masked_positions.length) return p.masked_positions.slice();
+  return (p.sequence || []).filter(f => f && (f.masked || f.grid === null)).map(f => f.position);
+}
+function validateNarcPuzzle(p) {
+  if (!p || typeof p !== "object") return "not a JSON object";
+  if (!Array.isArray(p.sequence) || !p.sequence.length) return "missing 'sequence' array";
+  const masked = narcMaskedPositions(p);
+  if (!masked.length) return "no masked frames — nothing to solve";
+  const ans = p.answer_grids || {};
+  const missing = masked.filter(pos => !Array.isArray(ans[String(pos)]));
+  if (missing.length) return `missing answer_grids for masked position(s) ${missing.join(", ")} — needed as ground truth to score solving`;
   return null;
 }
 
@@ -439,33 +594,239 @@ function renderPuzzleToDataUrl(puzzle) {
   return cv.toDataURL("image/png");
 }
 
+// Render a NARC narrative sequence: frames laid out left-to-right in position
+// order, masked frames drawn as a hatched "?" box. Order and per-frame position
+// labels are made explicit so the model can key its answers by position.
+function narcFrameLabel(frame) {
+  const base = `Frame ${frame.position}`;
+  const custom = (frame.label || "").trim();
+  return custom && custom.toLowerCase() !== base.toLowerCase() ? `${base} · ${custom}` : base;
+}
+function renderNarcToDataUrl(puzzle) {
+  const seq = (puzzle.sequence || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0));
+  const maskedSet = new Set(narcMaskedPositions(puzzle).map(Number));
+
+  let maxDim = 1;
+  seq.forEach(f => {
+    const rows = f.rows || (Array.isArray(f.grid) ? f.grid.length : 5);
+    const cols = f.cols || (Array.isArray(f.grid) && f.grid[0] ? f.grid[0].length : 5);
+    maxDim = Math.max(maxDim, rows, cols);
+  });
+  const CELL = Math.max(6, Math.min(20, Math.floor(480 / maxDim)));
+  const PAD = 24, GAP = 26, TITLE_H = 20, ARROW_W = 22;
+  const titleH = puzzle.title ? 34 : 6;
+
+  const dimsOf = (f) => ({
+    rows: f.rows || (Array.isArray(f.grid) ? f.grid.length : 5),
+    cols: f.cols || (Array.isArray(f.grid) && f.grid[0] ? f.grid[0].length : 5),
+  });
+  const cards = seq.map(f => {
+    const { rows, cols } = dimsOf(f);
+    return { frame: f, rows, cols, w: cols * CELL, h: rows * CELL, masked: maskedSet.has(Number(f.position)) };
+  });
+
+  const rowH = Math.max(...cards.map(c => c.h), CELL * 3);
+  let x = PAD;
+  cards.forEach((c, i) => { c.x = x; x += c.w + (i < cards.length - 1 ? GAP + ARROW_W : 0); });
+  const contentW = x - PAD;
+  const canvasW = Math.max(300, contentW + PAD * 2);
+  const canvasH = titleH + TITLE_H + rowH + 20 + 46 + PAD;
+
+  const cv = $("renderCanvas");
+  const scale = window.devicePixelRatio > 1 ? 2 : 1;
+  cv.width = canvasW * scale; cv.height = canvasH * scale;
+  const ctx = cv.getContext("2d");
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvasW, canvasH);
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+
+  if (puzzle.title) {
+    ctx.fillStyle = "#111111";
+    ctx.font = "bold 15px -apple-system, Segoe UI, sans-serif";
+    ctx.fillText("Title: " + puzzle.title, canvasW / 2, PAD - 6, canvasW - PAD * 2);
+  }
+
+  const gridTop = titleH + TITLE_H;
+  const drawGrid = (g, gx, top) => {
+    const rowsN = g.length, colsN = g[0].length;
+    for (let r = 0; r < rowsN; r++) for (let c = 0; c < colsN; c++) {
+      const v = Math.max(0, Math.min(9, parseInt(g[r][c], 10) || 0));
+      ctx.fillStyle = ARC_COLORS[v];
+      ctx.fillRect(gx + c * CELL, top + r * CELL, CELL, CELL);
+    }
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1;
+    for (let r = 0; r <= rowsN; r++) { ctx.beginPath(); ctx.moveTo(gx, top + r * CELL); ctx.lineTo(gx + colsN * CELL, top + r * CELL); ctx.stroke(); }
+    for (let c = 0; c <= colsN; c++) { ctx.beginPath(); ctx.moveTo(gx + c * CELL, top); ctx.lineTo(gx + c * CELL, top + rowsN * CELL); ctx.stroke(); }
+  };
+  const drawMasked = (gx, top, w, h) => {
+    ctx.fillStyle = "#f2f2f2"; ctx.fillRect(gx, top, w, h);
+    // Clip the diagonal hatch to the masked box so it can't bleed onto neighbouring frames.
+    ctx.save();
+    ctx.beginPath(); ctx.rect(gx, top, w, h); ctx.clip();
+    ctx.strokeStyle = "#bbbbbb"; ctx.lineWidth = 1;
+    for (let d = -h; d < w; d += 8) { ctx.beginPath(); ctx.moveTo(gx + d, top); ctx.lineTo(gx + d + h, top + h); ctx.stroke(); }
+    ctx.restore();
+    ctx.strokeStyle = "#888888"; ctx.lineWidth = 1; ctx.strokeRect(gx, top, w, h);
+    ctx.fillStyle = "#1f6feb"; ctx.font = "bold 30px sans-serif";
+    ctx.fillText("?", gx + w / 2, top + h / 2);
+  };
+
+  cards.forEach((c, i) => {
+    const top = gridTop + (rowH - c.h) / 2;
+    // label (position order is explicit in the frame labels)
+    ctx.fillStyle = c.masked ? "#1f6feb" : "#333333";
+    ctx.font = c.masked ? "bold 11px -apple-system, Segoe UI, sans-serif" : "11px -apple-system, Segoe UI, sans-serif";
+    ctx.fillText(narcFrameLabel(c.frame), c.x + c.w / 2, gridTop - 9, c.w + GAP);
+    if (c.masked || !Array.isArray(c.frame.grid)) drawMasked(c.x, top, c.w, c.h);
+    else drawGrid(c.frame.grid, c.x, top);
+    // arrow to next frame — makes the left-to-right order unmistakable
+    if (i < cards.length - 1) {
+      ctx.fillStyle = "#333333"; ctx.font = "22px sans-serif";
+      ctx.fillText("→", c.x + c.w + GAP / 2 + ARROW_W / 2, gridTop + rowH / 2);
+    }
+  });
+
+  // legend
+  const legTop = canvasH - PAD - 36 + 10;
+  const swW = Math.min(64, contentW / 10);
+  const legX0 = PAD + (contentW - swW * 10) / 2;
+  for (let i = 0; i < 10; i++) {
+    const sx = legX0 + i * swW;
+    ctx.fillStyle = ARC_COLORS[i];
+    ctx.fillRect(sx + 2, legTop, swW - 6, 18);
+    ctx.strokeStyle = "#888888"; ctx.lineWidth = 0.5; ctx.strokeRect(sx + 2, legTop, swW - 6, 18);
+    ctx.fillStyle = (i === 4 || i === 8) ? "#333333" : "#ffffff";
+    ctx.font = "bold 10px sans-serif";
+    ctx.fillText(String(i), sx + swW / 2 - 1, legTop + 9);
+    ctx.fillStyle = "#333333"; ctx.font = "8px sans-serif";
+    ctx.fillText(ARC_COLOR_NAMES[i], sx + swW / 2 - 1, legTop + 28);
+  }
+
+  return cv.toDataURL("image/png");
+}
+
 function onPuzzleFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     const info = $("puzzleInfo"), prev = $("puzzlePreview");
     try {
       const p = JSON.parse(reader.result);
-      const err = validatePuzzle(p);
-      if (err) { info.innerHTML = `<span style="color:#f85149">Invalid puzzle: ${escapeHtml(err)}</span>`; prev.innerHTML = ""; setRunEnabled(); return; }
+      const kind = detectKind(p);
+      const err = kind === "narc" ? validateNarcPuzzle(p) : validatePuzzle(p);
+      if (err) { info.innerHTML = `<span style="color:#f85149">Invalid ${kind.toUpperCase()} puzzle: ${escapeHtml(err)}</span>`; prev.innerHTML = ""; currentPuzzle = null; currentImageDataUrl = null; setRunEnabled(); return; }
       currentPuzzle = p;
+      currentKind = kind;
       currentPuzzle._name = file.name.replace(/\.json$/i, "");
-      currentImageDataUrl = renderPuzzleToDataUrl(p);
-      const nTrain = (p.train || []).length, nTest = (p.test || []).length;
-      info.innerHTML = `<span class="ok">Loaded “${escapeHtml(currentPuzzle._name)}”</span> — ${nTrain} train pair(s), ${nTest} test pair(s). Metaphor: <em>${escapeHtml(p.metaphor || "(none)")}</em>`;
-      prev.innerHTML = `<img class="preview-img" src="${currentImageDataUrl}" alt="rendered puzzle" />`;
+      updateExpCallout(kind);
+      if (kind === "narc") {
+        currentGeneratedImage = renderNarcToDataUrl(p);
+        const masked = narcMaskedPositions(p);
+        const nFrames = (p.sequence || []).length;
+        info.innerHTML = `<span class="ok">Loaded NARC “${escapeHtml(p.title || currentPuzzle._name)}”</span> — ${nFrames} frame(s) in sequence, ${masked.length} masked (position${masked.length > 1 ? "s" : ""} ${masked.join(", ")}). The narrative and frame order are sent to the model.`;
+      } else {
+        currentGeneratedImage = renderPuzzleToDataUrl(p);
+        const nTrain = (p.train || []).length, nTest = (p.test || []).length;
+        info.innerHTML = `<span class="ok">Loaded MARC “${escapeHtml(currentPuzzle._name)}”</span> — ${nTrain} train pair(s), ${nTest} test pair(s). Metaphor: <em>${escapeHtml(p.metaphor || "(none)")}</em>`;
+      }
+      // A new puzzle always starts on its freshly-generated image; any prior override is dropped.
+      overrideImageName = null;
+      currentImageDataUrl = currentGeneratedImage;
+      $("imageControls").style.display = "flex";
+      $("narcOptions").style.display = kind === "narc" ? "block" : "none";
+      refreshImagePreview();
     } catch (e) {
       info.innerHTML = `<span style="color:#f85149">Could not parse JSON: ${escapeHtml(String(e.message || e))}</span>`;
-      prev.innerHTML = ""; currentPuzzle = null; currentImageDataUrl = null;
+      prev.innerHTML = ""; currentPuzzle = null; currentImageDataUrl = null; currentGeneratedImage = null;
+      overrideImageName = null; $("imageControls").style.display = "none"; $("narcOptions").style.display = "none";
     }
     setRunEnabled();
   };
   reader.readAsText(file);
 }
 
+// Render the active image (generated or overridden) into the preview + status line.
+function refreshImagePreview() {
+  const prev = $("puzzlePreview"), src = $("imageSource");
+  if (!currentImageDataUrl) { prev.innerHTML = ""; if (src) src.textContent = ""; return; }
+  prev.innerHTML = `<img class="preview-img" src="${currentImageDataUrl}" alt="puzzle image" />`;
+  $("useGeneratedBtn").style.display = overrideImageName ? "" : "none";
+  if (src) {
+    src.innerHTML = overrideImageName
+      ? `<span style="color:#d29922">Sending overridden image:</span> ${escapeHtml(overrideImageName)} — JSON &amp; prompt unchanged (scored against the loaded JSON's ground truth).`
+      : `Sending the JSON-generated image. Use <strong>Override image</strong> to test a custom variant.`;
+  }
+}
+
+// Swap in a user-supplied image without touching the loaded JSON/prompts/ground truth.
+function onOverrideImage(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    currentImageDataUrl = String(reader.result);   // data: URL
+    overrideImageName = file.name;
+    refreshImagePreview();
+    setRunEnabled();
+  };
+  reader.readAsDataURL(file);
+}
+function useGeneratedImage() {
+  if (!currentGeneratedImage) return;
+  currentImageDataUrl = currentGeneratedImage;
+  overrideImageName = null;
+  refreshImagePreview();
+  setRunEnabled();
+}
+
+// Reflect the loaded puzzle kind in the experiments-panel callout.
+function updateExpCallout(kind) {
+  const el = $("expCallout");
+  if (!el) return;
+  if (kind === "narc") {
+    el.innerHTML = `<strong>NARC (narrative sequence)</strong> — the model fills in the masked frame(s) of an ordered story.<br/>
+      <strong>1 · Blind solve</strong> — sequence image + narrative → each masked frame's grid.<br/>
+      <strong>2 · Reconstruct</strong> — image → JSON of the visible frames, scored on visible cells.<br/>
+      <strong>3 · Reconstruct-then-solve</strong> — reuse the reconstruction + narrative, then produce the masked frame(s) (text only).`;
+  } else {
+    el.innerHTML = `<strong>MARC</strong> — the model solves a single masked test output from train pairs.<br/>
+      <strong>1 · Blind solve</strong> — image → test output grid, no reconstruction.<br/>
+      <strong>2 · Reconstruct</strong> — image → JSON, scored on visible cells (train grids + test input).<br/>
+      <strong>3 · Reconstruct-then-solve</strong> — reuse the reconstruction, then solve from that JSON (text only).`;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // MindRouter streaming client
 // ─────────────────────────────────────────────────────────────────────────
-async function callMindRouter({ model, messages, thinking, jsonMode, maxTokens, onProgress }) {
+// A stalled stream used to hang forever — there was no client-side timeout at
+// all. The timer is reset on every chunk, so it bounds *silence*, not total
+// generation time: a legitimately slow 9-minute stream keeps going, a dead
+// connection gives up.
+const STREAM_IDLE_TIMEOUT_MS = 240000;
+// Transient server errors are worth a couple of tries during a long sweep. 404 is
+// not: per the Week 4 analysis it means every backend's circuit breaker has
+// tripped, and retrying only keeps those circuits hot.
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504]);
+const MAX_ATTEMPTS = 3;
+
+async function callMindRouter({ model, messages, thinking, jsonMode, maxTokens, onProgress, signal }) {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await callMindRouterOnce({ model, messages, thinking, jsonMode, maxTokens, onProgress, signal });
+    } catch (e) {
+      lastErr = e;
+      if (e.name === "AbortError" && signal && signal.aborted) throw e;   // user stopped
+      if (!e.retryable || attempt === MAX_ATTEMPTS) throw e;
+      const backoff = 2000 * Math.pow(2, attempt - 1);
+      if (onProgress) onProgress(0, `retrying in ${backoff / 1000}s (attempt ${attempt + 1}/${MAX_ATTEMPTS}) — ${e.message}`);
+      await sleep(backoff);
+    }
+  }
+  throw lastErr;
+}
+
+async function callMindRouterOnce({ model, messages, thinking, jsonMode, maxTokens, onProgress, signal }) {
   model = model || modelId();
   const payload = {
     model, messages,
@@ -476,18 +837,55 @@ async function callMindRouter({ model, messages, thinking, jsonMode, maxTokens, 
   if (supportsThinking(model)) payload.chat_template_kwargs = { enable_thinking: !!thinking };
   if (!thinking && jsonMode) payload.response_format = { type: "json_object" };
 
-  const resp = await fetch(baseUrl() + "/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "text/event-stream",
-      ...(apiKey() ? { "Authorization": "Bearer " + apiKey() } : {}),
-    },
-    body: JSON.stringify(payload),
-  });
+  const ctrl = new AbortController();
+  let idleTimer = null;
+  const bumpIdle = () => {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => ctrl.abort(new DOMException("idle timeout", "TimeoutError")), STREAM_IDLE_TIMEOUT_MS);
+  };
+  const onOuterAbort = () => ctrl.abort();
+  if (signal) {
+    if (signal.aborted) throw new DOMException("aborted", "AbortError");
+    signal.addEventListener("abort", onOuterAbort, { once: true });
+  }
+  const cleanup = () => {
+    clearTimeout(idleTimer);
+    if (signal) signal.removeEventListener("abort", onOuterAbort);
+  };
 
-  if (resp.status === 404) throw new Error("HTTP 404 — no healthy backend currently serves this model (circuit breaker). Not retried.");
-  if (!resp.ok) throw new Error("HTTP " + resp.status + " — " + (await resp.text()).slice(0, 500));
+  let resp;
+  bumpIdle();
+  try {
+    resp = await fetch(baseUrl() + "/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+        ...(apiKey() ? { "Authorization": "Bearer " + apiKey() } : {}),
+      },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    cleanup();
+    if (signal && signal.aborted) throw e;
+    // A network-level failure (proxy restarted, connection reset) is worth retrying.
+    const err = new Error("network error — " + (e.message || e));
+    err.retryable = true;
+    throw err;
+  }
+
+  if (resp.status === 404) {
+    cleanup();
+    throw new Error("HTTP 404 — no healthy backend currently serves this model (circuit breaker). Not retried.");
+  }
+  if (!resp.ok) {
+    const body = (await resp.text()).slice(0, 500);
+    cleanup();
+    const err = new Error("HTTP " + resp.status + " — " + body);
+    err.retryable = RETRY_STATUS.has(resp.status);
+    throw err;
+  }
 
   // Stream SSE; accumulate content + reasoning. Fall back to plain JSON body.
   const reader = resp.body.getReader();
@@ -505,19 +903,31 @@ async function callMindRouter({ model, messages, thinking, jsonMode, maxTokens, 
     if (onProgress) onProgress(content.length + reasoning.length);
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-    for (const line of lines) {
-      const t = line.trim();
-      if (!t.startsWith("data:")) continue;
-      sawSSE = true;
-      handleData(t.slice(5).trim());
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bumpIdle();                       // progress resets the silence timer
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t.startsWith("data:")) continue;
+        sawSSE = true;
+        handleData(t.slice(5).trim());
+      }
     }
+  } catch (e) {
+    cleanup();
+    if (signal && signal.aborted) throw e;
+    const err = new Error(e.name === "TimeoutError" || (e.message || "").includes("idle timeout")
+      ? `stream went silent for ${STREAM_IDLE_TIMEOUT_MS / 1000}s`
+      : "stream failed — " + (e.message || e));
+    err.retryable = true;
+    throw err;
   }
+  cleanup();
   if (buffer.trim().startsWith("data:")) { sawSSE = true; handleData(buffer.trim().slice(5).trim()); }
 
   if (!sawSSE) {
@@ -613,6 +1023,70 @@ function extractOutputGrid(parsed) {
   return null;
 }
 
+// NARC: pull a {position -> grid} map out of whatever shape the model returned.
+// Tolerates {answers:{...}}, a top-level position-keyed object, and — when there
+// is exactly one masked frame — a bare grid / {output:...} / {grid:...}.
+function isGrid(g) { return Array.isArray(g) && g.length > 0 && Array.isArray(g[0]); }
+function extractAnswersMap(parsed, maskedPositions) {
+  const out = {};
+  if (!parsed) return out;
+  const want = (maskedPositions || []).map(String);
+  const takeFrom = (obj) => {
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return;
+    for (const [k, v] of Object.entries(obj)) {
+      const key = String(k).replace(/[^0-9-]/g, "");   // "frame 3" / "position_3" → "3"
+      if (!/\d/.test(key)) continue;                    // skip non-positional keys (e.g. "output", "grid")
+      if (isGrid(v)) out[key] = v;
+      else if (v && isGrid(v.grid)) out[key] = v.grid;
+      else if (v && isGrid(v.output)) out[key] = v.output;
+    }
+  };
+  if (parsed.answers) takeFrom(parsed.answers);
+  if (!Object.keys(out).length) takeFrom(parsed);
+  // Single masked frame: accept a bare grid or {output}/{grid}.
+  if (!Object.keys(out).length && want.length === 1) {
+    const g = extractOutputGrid(parsed) || (isGrid(parsed.grid) ? parsed.grid : null) || (isGrid(parsed) ? parsed : null);
+    if (g) out[want[0]] = g;
+  }
+  return out;
+}
+
+// NARC scoring: score each masked frame against its answer grid, plus aggregate
+// cell accuracy across all masked frames. "solved" = every masked frame exact.
+function narcScore(predictedByPos, answerGrids, maskedPositions) {
+  const perFrame = [];
+  let errors = 0, cells = 0, allSolved = true, anyParsed = false;
+  for (const pos of maskedPositions) {
+    const key = String(pos);
+    const truth = gridToInt(answerGrids[key] || []);
+    const pred = predictedByPos[key];
+    const has = isGrid(pred);
+    if (has) anyParsed = true;
+    const acc = has ? cellAccuracy(pred, truth) : { errors: countCells(truth), cells: countCells(truth), pct: 0 };
+    const solved = has ? exactMatch(pred, truth) : false;
+    if (!solved) allSolved = false;
+    errors += acc.errors; cells += acc.cells;
+    perFrame.push({ pos: key, predicted: has ? gridToInt(pred) : null, truth, solved, cell: acc, parsed: has });
+  }
+  return { perFrame, solved: allSolved, parsed: anyParsed, cell: { errors, cells, pct: cells ? 100 * (cells - errors) / cells : 0 } };
+}
+
+// NARC reconstruction accuracy over VISIBLE frames only (masked frames excluded).
+function narcReconstructionAccuracy(modelObj, puzzle) {
+  const maskedSet = new Set(narcMaskedPositions(puzzle).map(Number));
+  const modelByPos = {};
+  ((modelObj && modelObj.sequence) || []).forEach(f => {
+    if (f && f.position !== undefined && isGrid(f.grid)) modelByPos[String(f.position)] = f.grid;
+  });
+  let errors = 0, cells = 0;
+  (puzzle.sequence || []).forEach(f => {
+    if (maskedSet.has(Number(f.position)) || !isGrid(f.grid)) return;
+    const a = cellAccuracy(modelByPos[String(f.position)] || [], f.grid);
+    errors += a.errors; cells += a.cells;
+  });
+  return { errors, cells, pct: cells ? 100 * (cells - errors) / cells : 0, modelByPos };
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Run orchestration
 // ─────────────────────────────────────────────────────────────────────────
@@ -625,80 +1099,22 @@ function setRunEnabled() {
 
 let busy = false;
 
-// Core runner. ctx = { image, truth:{train,test}, puzzleName, metaphor, model, thinking }.
+// Dispatcher. ctx = { kind, image, truth, puzzleName, metaphor, title, narrative, model, thinking }.
 // Used by both a fresh run (from the loaded puzzle) and a retry (from a stored run).
 async function runExperiments(ctx) {
   if (busy) return;
   busy = true;
   $("runError").textContent = "";
-  const { image, truth, puzzleName, metaphor, model, thinking } = ctx;
-  const maxTokens = thinking ? 32768 : 8192;
-  const truthOut = gridToInt(truth.test[0].output);
-  const imageContent = [
-    { type: "text", text: SOLVE_PROMPT_IMAGE },
-    { type: "image_url", image_url: { url: image } },
-  ];
-  const setStatus = (html) => { $("runStatus").innerHTML = html; };
-  const prog = (label) => (n) => setStatus(`${label} <span class="live">streaming… ${n.toLocaleString()} chars</span>`);
-
   $("runBtn").disabled = true;
-  const record = {
-    timestamp: new Date().toISOString(),
-    model, baseUrl: baseUrl(), thinking,
-    puzzleName: puzzleName || "puzzle", metaphor: metaphor || "",
-    image, truth: { train: truth.train, test: truth.test },
-    experiments: {},
-  };
-
+  const setStatus = (html) => { $("runStatus").innerHTML = html; };
+  // Second arg carries retry/backoff notices from callMindRouter.
+  const prog = (label) => (n, msg) => setStatus(msg
+    ? `${label} <span class="live">${escapeHtml(msg)}</span>`
+    : `${label} <span class="live">streaming… ${Number(n).toLocaleString()} chars</span>`);
   try {
-    // ── Exp 1: blind solve ──────────────────────────────────────────────
-    setStatus("Exp 1 · blind solve — sending…");
-    let r1 = await callMindRouter({ model, messages: [{ role: "user", content: imageContent }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 1 · blind solve") });
-    const p1 = parseJsonLenient(r1.content), out1 = extractOutputGrid(p1);
-    record.experiments.blindSolve = {
-      prompt: SOLVE_PROMPT_IMAGE, raw: r1.content, reasoning: r1.reasoning,
-      predicted: out1, parsed: !!out1,
-      solved: out1 ? exactMatch(out1, truthOut) : false,
-      cell: out1 ? cellAccuracy(out1, truthOut) : { errors: truthOut.length, cells: countCells(truthOut), pct: 0 },
-    };
-
-    await sleep(PACE_MS);
-
-    // ── Exp 2: reconstruct ──────────────────────────────────────────────
-    setStatus("Exp 2 · reconstruct — sending…");
-    const reconContent = [
-      { type: "text", text: RECOVER_PROMPT },
-      { type: "image_url", image_url: { url: image } },
-    ];
-    let r2 = await callMindRouter({ model, messages: [{ role: "user", content: reconContent }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 2 · reconstruct") });
-    const p2 = parseJsonLenient(r2.content);
-    record.experiments.reconstruct = {
-      prompt: RECOVER_PROMPT, raw: r2.content, reasoning: r2.reasoning,
-      parsed: !!p2, model_output: p2,
-      recon: p2 ? reconstructionAccuracy(p2, truth) : { errors: 0, cells: 0, pct: 0 },
-    };
-
-    await sleep(PACE_MS);
-
-    // ── Exp 3: reconstruct-then-solve (text-only, from Exp 2's JSON) ─────
-    if (p2) {
-      // strip any test output the model may have hallucinated, keep it honest
-      const forSolve = { metaphor: p2.metaphor, train: p2.train, test: (p2.test || []).map(t => ({ input: t.input })) };
-      const jsonStr = JSON.stringify(forSolve);
-      setStatus("Exp 3 · reconstruct-then-solve — sending…");
-      let r3 = await callMindRouter({ model, messages: [{ role: "user", content: solvePromptText(jsonStr) }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 3 · reconstruct-then-solve") });
-      const p3 = parseJsonLenient(r3.content), out3 = extractOutputGrid(p3);
-      record.experiments.reconSolve = {
-        prompt: "(text) solve from reconstructed JSON", solvedFromJson: jsonStr,
-        raw: r3.content, reasoning: r3.reasoning, predicted: out3, parsed: !!out3,
-        solved: out3 ? exactMatch(out3, truthOut) : false,
-        cell: out3 ? cellAccuracy(out3, truthOut) : { errors: truthOut.length, cells: countCells(truthOut), pct: 0 },
-        skipped: false,
-      };
-    } else {
-      record.experiments.reconSolve = { skipped: true, reason: "reconstruction produced no parseable JSON" };
-    }
-
+    const record = ctx.kind === "narc"
+      ? await runNarcCore(ctx, setStatus, prog)
+      : await runMarcCore(ctx, setStatus, prog);
     setStatus('<span class="ok">Done.</span>');
     runs.unshift(record);
     saveRuns();
@@ -712,13 +1128,170 @@ async function runExperiments(ctx) {
   }
 }
 
+// ── MARC: blind solve · reconstruct · reconstruct-then-solve ──────────────
+async function runMarcCore(ctx, setStatus, prog) {
+  const { image, truth, puzzleName, metaphor, model, thinking } = ctx;
+  const maxTokens = thinking ? 32768 : 8192;
+  const truthOut = gridToInt(truth.test[0].output);
+  const record = {
+    timestamp: new Date().toISOString(), kind: "marc",
+    model, baseUrl: baseUrl(), thinking,
+    puzzleName: puzzleName || "puzzle", metaphor: metaphor || "",
+    image, imageName: ctx.imageName || "",
+    truth: { train: truth.train, test: truth.test },
+    experiments: {},
+  };
+
+  // ── Exp 1: blind solve ──────────────────────────────────────────────
+  setStatus("Exp 1 · blind solve — sending…");
+  const imageContent = [
+    { type: "text", text: SOLVE_PROMPT_IMAGE },
+    { type: "image_url", image_url: { url: image } },
+  ];
+  let r1 = await callMindRouter({ model, messages: [{ role: "user", content: imageContent }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 1 · blind solve") });
+  const p1 = parseJsonLenient(r1.content), out1 = extractOutputGrid(p1);
+  record.experiments.blindSolve = {
+    prompt: SOLVE_PROMPT_IMAGE, raw: r1.content, reasoning: r1.reasoning,
+    predicted: out1, parsed: !!out1,
+    solved: out1 ? exactMatch(out1, truthOut) : false,
+    cell: out1 ? cellAccuracy(out1, truthOut) : { errors: truthOut.length, cells: countCells(truthOut), pct: 0 },
+  };
+
+  await sleep(PACE_MS);
+
+  // ── Exp 2: reconstruct ──────────────────────────────────────────────
+  setStatus("Exp 2 · reconstruct — sending…");
+  const reconContent = [
+    { type: "text", text: RECOVER_PROMPT },
+    { type: "image_url", image_url: { url: image } },
+  ];
+  let r2 = await callMindRouter({ model, messages: [{ role: "user", content: reconContent }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 2 · reconstruct") });
+  const p2 = parseJsonLenient(r2.content);
+  record.experiments.reconstruct = {
+    prompt: RECOVER_PROMPT, raw: r2.content, reasoning: r2.reasoning,
+    parsed: !!p2, model_output: p2,
+    recon: p2 ? reconstructionAccuracy(p2, truth) : { errors: 0, cells: 0, pct: 0 },
+  };
+
+  await sleep(PACE_MS);
+
+  // ── Exp 3: reconstruct-then-solve (text-only, from Exp 2's JSON) ─────
+  if (p2) {
+    const forSolve = { metaphor: p2.metaphor, train: p2.train, test: (p2.test || []).map(t => ({ input: t.input })) };
+    const jsonStr = JSON.stringify(forSolve);
+    const solveText = solvePromptText(jsonStr);
+    setStatus("Exp 3 · reconstruct-then-solve — sending…");
+    let r3 = await callMindRouter({ model, messages: [{ role: "user", content: solveText }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 3 · reconstruct-then-solve") });
+    const p3 = parseJsonLenient(r3.content), out3 = extractOutputGrid(p3);
+    record.experiments.reconSolve = {
+      prompt: solveText, solvedFromJson: jsonStr,
+      raw: r3.content, reasoning: r3.reasoning, predicted: out3, parsed: !!out3,
+      solved: out3 ? exactMatch(out3, truthOut) : false,
+      cell: out3 ? cellAccuracy(out3, truthOut) : { errors: truthOut.length, cells: countCells(truthOut), pct: 0 },
+      skipped: false,
+    };
+  } else {
+    record.experiments.reconSolve = { skipped: true, reason: "reconstruction produced no parseable JSON" };
+  }
+  return record;
+}
+
+// ── NARC: same three experiments, adapted to a narrative sequence with one or
+// more masked frames. The narrative + frame order are handed to the model, and
+// scoring covers every masked frame (solved = all frames exact). ────────────
+async function runNarcCore(ctx, setStatus, prog) {
+  const { image, truth, puzzleName, title, narrative, model, thinking } = ctx;
+  const includeNarrative = ctx.includeNarrative !== false;
+  const includeSizes = ctx.includeSizes !== false;
+  const maxTokens = thinking ? 32768 : 8192;
+  const masked = narcMaskedPositions(truth);
+  const answerGrids = truth.answer_grids || {};
+  const allDims = {};
+  masked.forEach(pos => {
+    const a = answerGrids[String(pos)];
+    if (isGrid(a)) allDims[String(pos)] = `${a.length}x${a[0].length}`;
+  });
+  // What the model is actually told, per the toggles:
+  const promptNarrative = includeNarrative ? (narrative || "") : "";
+  const promptDims = includeSizes ? allDims : null;
+
+  const record = {
+    timestamp: new Date().toISOString(), kind: "narc",
+    model, baseUrl: baseUrl(), thinking,
+    includeNarrative, includeSizes,
+    puzzleName: puzzleName || "puzzle", title: title || "", narrative: narrative || "",
+    image, imageName: ctx.imageName || "",
+    truth: { sequence: truth.sequence, masked_positions: masked, answer_grids: answerGrids, narrative: narrative || "", title: title || "" },
+    experiments: {},
+  };
+
+  // ── Exp 1: blind solve (image + narrative → masked frame(s)) ─────────
+  setStatus("Exp 1 · blind solve — sending…");
+  const solvePromptImg = narcSolvePromptImage(promptNarrative, masked, promptDims);
+  const imageContent = [
+    { type: "text", text: solvePromptImg },
+    { type: "image_url", image_url: { url: image } },
+  ];
+  let r1 = await callMindRouter({ model, messages: [{ role: "user", content: imageContent }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 1 · blind solve") });
+  const p1 = parseJsonLenient(r1.content);
+  const ans1 = extractAnswersMap(p1, masked);
+  record.experiments.blindSolve = { prompt: solvePromptImg, raw: r1.content, reasoning: r1.reasoning, ...narcScore(ans1, answerGrids, masked) };
+
+  await sleep(PACE_MS);
+
+  // ── Exp 2: reconstruct visible frames ───────────────────────────────
+  setStatus("Exp 2 · reconstruct — sending…");
+  const reconContent = [
+    { type: "text", text: NARC_RECOVER_PROMPT },
+    { type: "image_url", image_url: { url: image } },
+  ];
+  let r2 = await callMindRouter({ model, messages: [{ role: "user", content: reconContent }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 2 · reconstruct") });
+  const p2 = parseJsonLenient(r2.content);
+  record.experiments.reconstruct = {
+    prompt: NARC_RECOVER_PROMPT, raw: r2.content, reasoning: r2.reasoning,
+    parsed: !!p2, model_output: p2,
+    recon: p2 ? narcReconstructionAccuracy(p2, truth) : { errors: 0, cells: 0, pct: 0, modelByPos: {} },
+  };
+
+  await sleep(PACE_MS);
+
+  // ── Exp 3: reconstruct-then-solve (text-only, from Exp 2's sequence) ─
+  if (p2 && Array.isArray(p2.sequence)) {
+    // keep only visible frames the model reconstructed (drop any masked positions it hallucinated)
+    const maskedSet = new Set(masked.map(Number));
+    const visible = p2.sequence
+      .filter(f => f && f.position !== undefined && !maskedSet.has(Number(f.position)) && isGrid(f.grid))
+      .sort((a, b) => a.position - b.position)
+      .map(f => ({ position: f.position, grid: f.grid }));
+    const jsonStr = JSON.stringify({ title: p2.title || title || "", sequence: visible });
+    const solveText = narcSolvePromptText(jsonStr, promptNarrative, masked, promptDims);
+    setStatus("Exp 3 · reconstruct-then-solve — sending…");
+    let r3 = await callMindRouter({ model, messages: [{ role: "user", content: solveText }], thinking, jsonMode: true, maxTokens, onProgress: prog("Exp 3 · reconstruct-then-solve") });
+    const p3 = parseJsonLenient(r3.content);
+    const ans3 = extractAnswersMap(p3, masked);
+    record.experiments.reconSolve = {
+      prompt: solveText, solvedFromJson: jsonStr,
+      raw: r3.content, reasoning: r3.reasoning, skipped: false, ...narcScore(ans3, answerGrids, masked),
+    };
+  } else {
+    record.experiments.reconSolve = { skipped: true, reason: "reconstruction produced no parseable sequence JSON" };
+  }
+  return record;
+}
+
 function runAll() {
   if (!currentPuzzle || !currentImageDataUrl) return;
   return runExperiments({
+    kind: currentKind,
     image: currentImageDataUrl,
+    imageName: overrideImageName || "",
     truth: currentPuzzle,
     puzzleName: currentPuzzle._name || "puzzle",
     metaphor: currentPuzzle.metaphor || "",
+    title: currentPuzzle.title || "",
+    narrative: currentPuzzle.narrative || "",
+    includeNarrative: $("narcNarrative").checked,
+    includeSizes: $("narcSizes").checked,
     model: modelId(),
     thinking: $("thinking").checked,
   });
@@ -729,19 +1302,520 @@ function retryRun(i) {
   const rec = runs[i];
   if (!rec) return;
   if (busy) return;
-  if (!rec.image || !rec.truth || !(rec.truth.test && rec.truth.test[0])) {
+  const kind = rec.kind || "marc";
+  const hasTruth = kind === "narc"
+    ? rec.truth && Array.isArray(rec.truth.sequence)
+    : rec.truth && rec.truth.test && rec.truth.test[0];
+  if (!rec.image || !hasTruth) {
     $("runError").textContent = "Cannot retry: this run has no saved image/puzzle (older or trimmed log).";
     return;
   }
   if (!baseUrl() || !rec.model) { $("runError").textContent = "Cannot retry: set a base URL (proxy) and model."; return; }
   window.scrollTo({ top: 0, behavior: "smooth" });
   runExperiments({
-    image: rec.image, truth: rec.truth,
+    kind, image: rec.image, imageName: rec.imageName || "", truth: rec.truth,
     puzzleName: rec.puzzleName, metaphor: rec.metaphor,
+    title: rec.title || (rec.truth && rec.truth.title) || "",
+    narrative: rec.narrative || (rec.truth && rec.truth.narrative) || "",
+    // reuse the toggle settings this run was recorded with (default ON for older logs)
+    includeNarrative: rec.includeNarrative !== false,
+    includeSizes: rec.includeSizes !== false,
     model: rec.model, thinking: rec.thinking,
   });
 }
 const countCells = (g) => g.reduce((s, r) => s + r.length, 0);
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch sweep
+//
+// Runs every puzzle × every model without holding the results in memory: each
+// completed experiment is appended to a JSONL file on disk and then dropped.
+// Scoring happens in code/scripts/narc_score.py, not here — so a batch from this
+// page and a batch from run_narc_sweep.py are graded by identical code. The
+// record shape below is therefore snake_case and must stay in step with
+// base_record() in run_narc_sweep.py.
+// ─────────────────────────────────────────────────────────────────────────
+const SCHEMA_VERSION = 2;
+
+// Frames the model is allowed to see. Filters strictly on masked_positions,
+// because some exported NARC files leave the answer grid inline on the masked
+// frame — inferring "visible" from the presence of a grid would leak it.
+function narcVisibleFrames(puzzle) {
+  const masked = new Set(narcMaskedPositions(puzzle).map(Number));
+  return (puzzle.sequence || [])
+    .filter(f => f && f.position !== undefined && !masked.has(Number(f.position)) && isGrid(f.grid))
+    .sort((a, b) => Number(a.position) - Number(b.position))
+    .map(f => ({ position: Number(f.position), grid: f.grid }));
+}
+
+// Must match run_key() in run_narc_sweep.py exactly, so either runner can resume
+// a results file the other one started.
+function runKeyFor(puzzleId, model, thinking, narrOn, sizesOn, experiment) {
+  return [puzzleId, model, thinking ? "think" : "nothink",
+          narrOn ? "narr" : "nonarr", sizesOn ? "sizes" : "nosizes", experiment].join("|");
+}
+
+function baseJsonlRecord(puzzle, puzzleFile, model, cfg, experiment, imageName, imageSource) {
+  const masked = narcMaskedPositions(puzzle);
+  const answers = puzzle.answer_grids || {};
+  const puzzleId = puzzle.puzzle_id || puzzleFile.replace(/\.json$/i, "");
+  const answerGrids = {};
+  masked.forEach(p => { answerGrids[String(p)] = answers[String(p)]; });
+  return {
+    schema_version: SCHEMA_VERSION,
+    run_key: runKeyFor(puzzleId, model, cfg.thinking, cfg.includeNarrative, cfg.includeSizes, experiment),
+    timestamp: new Date().toISOString(),
+    source: "browser-batch",
+    renderer: imageSource === "folder" ? "python-v1" : "browser-v1",
+    image_source: imageSource,
+    image_name: imageName || "",
+    puzzle_id: puzzleId,
+    puzzle_file: puzzleFile,
+    title: puzzle.title || "",
+    narrative: puzzle.narrative || "",
+    model,
+    api_url: baseUrl(),
+    thinking: !!cfg.thinking,
+    include_narrative: !!cfg.includeNarrative,
+    include_sizes: !!cfg.includeSizes,
+    experiment,
+    truth: {
+      masked_positions: masked.map(Number),
+      answer_grids: answerGrids,
+      visible_frames: narcVisibleFrames(puzzle),
+    },
+    prompt: "", raw: "", reasoning: "",
+    parsed: false, parse_needed_repair: false, predicted: null,
+    latency_ms: null, content_chars: 0, reasoning_chars: 0,
+    truncated: false, error: null, skipped: false,
+  };
+}
+
+// Did the lenient parser have to rescue the response? A model that always needs
+// rescuing is failing the "respond with ONLY JSON" instruction even when its
+// grids are right, so it's tracked separately from outright parse failure.
+function parseWithRepairFlag(text) {
+  if (!text) return { parsed: null, repaired: false };
+  try { return { parsed: JSON.parse(text.trim()), repaired: false }; } catch { /* fall through */ }
+  const parsed = parseJsonLenient(text);
+  return { parsed, repaired: parsed !== null };
+}
+
+// Reconstruction response → {position: grid}. Tolerates the requested
+// {sequence:[{position,grid}]} plus a bare frame list or a position-keyed object.
+function extractSequenceMap(parsed) {
+  const out = {};
+  let frames = null;
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    for (const k of ["sequence", "frames", "grids"]) if (Array.isArray(parsed[k])) { frames = parsed[k]; break; }
+  } else if (Array.isArray(parsed)) frames = parsed;
+
+  if (frames) {
+    frames.forEach((f, i) => {
+      if (isGrid(f)) { out[String(i)] = f; return; }
+      if (!f || typeof f !== "object" || !isGrid(f.grid)) return;
+      const pos = f.position !== undefined ? f.position : (f.index !== undefined ? f.index : i);
+      const n = parseInt(pos, 10);
+      out[String(Number.isFinite(n) ? n : i)] = f.grid;
+    });
+    return out;
+  }
+  if (parsed && typeof parsed === "object") {
+    for (const [k, v] of Object.entries(parsed)) {
+      const key = String(k).replace(/[^0-9-]/g, "");
+      if (/\d/.test(key) && isGrid(v)) out[key] = v;
+    }
+  }
+  return out;
+}
+
+// Quick shape/color split for the queue's live feedback only. The numbers of
+// record come from narc_score.py; this exists so a running sweep shows whether
+// the model is missing *where* things are or *what colour* they are.
+function shapeColorQuick(pred, truth) {
+  let cells = 0, correct = 0, shapeOk = 0, pairs = 0, colorOk = 0;
+  const t = gridToInt(truth), p = gridToInt(pred || []);
+  for (let r = 0; r < t.length; r++) {
+    for (let c = 0; c < t[r].length; c++) {
+      cells++;
+      const tv = t[r][c];
+      const has = p[r] !== undefined && p[r][c] !== undefined;
+      const pv = has ? p[r][c] : null;
+      if (pv === tv) correct++;
+      const tf = tv !== 0, pf = pv !== null && pv !== 0;
+      if (tf === pf) shapeOk++;
+      if (tf && pf) { pairs++; if (pv === tv) colorOk++; }
+    }
+  }
+  const pct = (n, d) => d ? 100 * n / d : null;
+  return { cells, pairs, cell: pct(correct, cells), shape: pct(shapeOk, cells), color: pct(colorOk, pairs) };
+}
+
+// ── JSONL sink ────────────────────────────────────────────────────────────
+// Chrome/Edge get a real appending file handle, so a crashed tab loses at most
+// the last record. Firefox/Safari have no File System Access API, so lines are
+// buffered and downloaded instead — the UI says which one is in play.
+const jsonl = {
+  handle: null, buffer: [], lines: 0,
+  get supported() { return typeof window.showSaveFilePicker === "function"; },
+
+  async pick() {
+    if (!this.supported) return false;
+    this.handle = await window.showSaveFilePicker({
+      suggestedName: "results.jsonl",
+      types: [{ description: "JSON Lines", accept: { "application/jsonl": [".jsonl"] } }],
+    });
+    return true;
+  },
+
+  async append(record) {
+    const line = JSON.stringify(record) + "\n";
+    this.lines++;
+    if (!this.handle) { this.buffer.push(line); return; }
+    // keepExistingData + explicit offset = append, not overwrite.
+    const file = await this.handle.getFile();
+    const w = await this.handle.createWritable({ keepExistingData: true });
+    await w.write({ type: "write", position: file.size, data: line });
+    await w.close();
+  },
+
+  download() {
+    if (!this.buffer.length) return false;
+    const blob = new Blob(this.buffer, { type: "application/jsonl" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `results-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.jsonl`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return true;
+  },
+};
+
+// ── Batch state ───────────────────────────────────────────────────────────
+const batch = {
+  puzzles: [],           // [{name, puzzle, id}]
+  images: new Map(),     // puzzle_id -> File
+  queue: [],             // [{puzzleIdx, model, experiment, state, note}]
+  doneKeys: new Set(),
+  running: false, paused: false, abort: null,
+  cursor: 0,
+};
+const BATCH_PACE_MS = 3000;
+const BATCH_COOLDOWN_MS = 30000;   // circuit-breaker recovery, per run_multimodel.py
+
+function batchModels() {
+  return $("batchModels").value.split("\n").map(s => s.trim()).filter(Boolean);
+}
+
+function setBatchStatus(html) { $("batchStatus").innerHTML = html; }
+function setBatchError(msg) { $("batchError").textContent = msg || ""; }
+
+async function onBatchPuzzleDir(files) {
+  batch.puzzles = [];
+  const rejected = [];
+  for (const file of files) {
+    if (!/\.json$/i.test(file.name)) continue;
+    let puzzle;
+    try { puzzle = JSON.parse(await file.text()); }
+    catch (e) { rejected.push(`${file.name}: unreadable JSON`); continue; }
+    if (detectKind(puzzle) !== "narc") { rejected.push(`${file.name}: not a NARC puzzle`); continue; }
+    const err = validateNarcPuzzle(puzzle);
+    if (err) { rejected.push(`${file.name}: ${err}`); continue; }
+    batch.puzzles.push({ name: file.name, puzzle, id: puzzle.puzzle_id || file.name.replace(/\.json$/i, "") });
+  }
+  batch.puzzles.sort((a, b) => a.name.localeCompare(b.name));
+  // The narrative/sizes switches govern batch runs too, so reveal them here —
+  // otherwise a batch-only user never sees what the model is being told, while
+  // the sweep silently uses whatever the (invisible) defaults are.
+  if (batch.puzzles.length) $("narcOptions").style.display = "block";
+  const parts = [`<span class="ok">${batch.puzzles.length} valid NARC puzzle(s)</span>`];
+  if (rejected.length) {
+    parts.push(`<span style="color:#d29922">${rejected.length} skipped:</span> ` +
+      escapeHtml(rejected.slice(0, 5).join(" · ")) + (rejected.length > 5 ? " …" : ""));
+  }
+  if (batch.images.size) parts.push(`${batch.images.size} rendered image(s) loaded`);
+  $("batchInfo").innerHTML = parts.join("<br/>");
+  rebuildQueue();
+}
+
+function onBatchImageDir(files) {
+  batch.images.clear();
+  for (const file of files) {
+    const m = /^(.+)\.png$/i.exec(file.name);
+    if (m) batch.images.set(m[1], file);
+  }
+  const parts = [`<span class="ok">${batch.images.size} rendered image(s) loaded</span> — requests will be byte-identical to the Python sweep.`];
+  if (batch.puzzles.length) {
+    const missing = batch.puzzles.filter(p => !batch.images.has(p.id));
+    parts.push(`${batch.puzzles.length} puzzle(s) queued`);
+    if (missing.length) {
+      parts.push(`<span style="color:#d29922">${missing.length} puzzle(s) have no matching image and will be rendered here instead:</span> ` +
+        escapeHtml(missing.slice(0, 5).map(p => p.id).join(", ")) + (missing.length > 5 ? " …" : ""));
+    }
+  } else {
+    parts.push("Now pick the puzzle folder.");
+  }
+  $("batchInfo").innerHTML = parts.join("<br/>");
+  rebuildQueue();
+}
+
+function rebuildQueue() {
+  const models = batchModels();
+  batch.queue = [];
+  batch.cursor = 0;
+  batch.puzzles.forEach((p, pi) => {
+    models.forEach(model => {
+      for (const experiment of ["blind_solve", "reconstruct", "recon_solve"]) {
+        batch.queue.push({ puzzleIdx: pi, model, experiment, state: "pending", note: "" });
+      }
+    });
+  });
+  $("batchStart").disabled = !batch.queue.length || batch.running;
+  renderQueue();
+}
+
+function renderQueue() {
+  const el = $("batchQueue");
+  if (!batch.queue.length) { el.innerHTML = ""; return; }
+  const done = batch.queue.filter(q => q.state !== "pending" && q.state !== "running").length;
+  const rows = batch.queue.map((q, i) => {
+    const p = batch.puzzles[q.puzzleIdx];
+    return `<tr class="${q.state === "running" ? "active" : ""}">
+      <td>${i + 1}</td>
+      <td>${escapeHtml(p ? p.id : "?")}</td>
+      <td>${escapeHtml(q.model)}</td>
+      <td>${escapeHtml(q.experiment)}</td>
+      <td class="q-state q-${q.state}">${q.state}</td>
+      <td>${escapeHtml(q.note || "")}</td>
+    </tr>`;
+  }).join("");
+  el.innerHTML = `<div class="q-bar"><span style="width:${batch.queue.length ? 100 * done / batch.queue.length : 0}%"></span></div>
+    <div class="queue-wrap"><table class="queue">
+      <thead><tr><th>#</th><th>Puzzle</th><th>Model</th><th>Experiment</th><th>State</th><th>Result</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+}
+
+function markQueue(i, state, note) {
+  batch.queue[i].state = state;
+  if (note !== undefined) batch.queue[i].note = note;
+  renderQueue();
+}
+
+async function imageForPuzzle(entry) {
+  const file = batch.images.get(entry.id);
+  if (file) {
+    const url = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result));
+      r.onerror = () => rej(r.error);
+      r.readAsDataURL(file);
+    });
+    return { url, name: file.name, source: "folder" };
+  }
+  return { url: renderNarcToDataUrl(entry.puzzle), name: `${entry.id}.png`, source: "generated" };
+}
+
+async function startBatch() {
+  if (batch.running) return;
+  setBatchError("");
+  if (!baseUrl()) { setBatchError("Set a Base URL first (the CORS proxy)."); return; }
+  if (!batchModels().length) { setBatchError("Enter at least one model id."); return; }
+  if (!batch.puzzles.length) { setBatchError("Pick a puzzle folder first."); return; }
+
+  if (jsonl.supported && !jsonl.handle) {
+    try { await jsonl.pick(); }
+    catch { setBatchError("No output file chosen — nothing would be saved."); return; }
+  }
+
+  rebuildQueue();
+  batch.running = true; batch.paused = false;
+  batch.abort = new AbortController();
+  $("batchStart").disabled = true;
+  $("batchPause").style.display = "";
+  $("batchStop").style.display = "";
+  $("batchPause").textContent = "⏸ Pause";
+  $("runBtn").disabled = true;        // one request at a time, page-wide
+
+  // Carry each puzzle's reconstruction across to experiment 3.
+  const reconCache = new Map();
+
+  for (let i = 0; i < batch.queue.length; i++) {
+    batch.cursor = i;
+    if (!batch.running) break;
+    while (batch.paused && batch.running) await sleep(300);
+    if (!batch.running) break;
+
+    const item = batch.queue[i];
+    const entry = batch.puzzles[item.puzzleIdx];
+    const cfg = {
+      thinking: $("thinking").checked,
+      includeNarrative: $("narcNarrative").checked,
+      includeSizes: $("narcSizes").checked,
+    };
+    const key = runKeyFor(entry.id, item.model, cfg.thinking, cfg.includeNarrative, cfg.includeSizes, item.experiment);
+    if ($("batchSkipDone").checked && batch.doneKeys.has(key)) {
+      markQueue(i, "skipped", "already in results file");
+      continue;
+    }
+
+    markQueue(i, "running", "");
+    setBatchStatus(`Running ${i + 1}/${batch.queue.length} — ${entry.id} · ${item.model} · ${item.experiment}`);
+
+    try {
+      const note = await runBatchItem(entry, item, cfg, reconCache, key);
+      markQueue(i, "done", note);
+      batch.doneKeys.add(key);
+    } catch (e) {
+      if (!batch.running) { markQueue(i, "pending", ""); break; }
+      markQueue(i, "failed", (e.message || String(e)).slice(0, 120));
+      // Cool down before the next request so one tripped backend doesn't
+      // cascade through the rest of the queue.
+      setBatchStatus(`<span class="live">Cooling down ${BATCH_COOLDOWN_MS / 1000}s after a failure…</span>`);
+      await sleep(BATCH_COOLDOWN_MS);
+    }
+
+    if (i < batch.queue.length - 1) await sleep(BATCH_PACE_MS);
+  }
+
+  batch.running = false;
+  $("batchPause").style.display = "none";
+  $("batchStop").style.display = "none";
+  $("batchStart").disabled = false;
+  setRunEnabled();
+
+  const counts = batch.queue.reduce((a, q) => { a[q.state] = (a[q.state] || 0) + 1; return a; }, {});
+  const summary = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(" · ");
+  if (jsonl.handle) {
+    setBatchStatus(`<span class="ok">Batch finished.</span> ${summary} — ${jsonl.lines} record(s) written to your results.jsonl.`);
+  } else {
+    $("batchDownload").style.display = "";
+    setBatchStatus(`<span class="ok">Batch finished.</span> ${summary} — ${jsonl.lines} record(s) buffered. <strong>Download them now</strong> (this browser has no File System Access API).`);
+  }
+}
+
+async function runBatchItem(entry, item, cfg, reconCache, key) {
+  const puzzle = entry.puzzle;
+  const masked = narcMaskedPositions(puzzle);
+  const answerGrids = puzzle.answer_grids || {};
+  const allDims = {};
+  masked.forEach(pos => {
+    const a = answerGrids[String(pos)];
+    if (isGrid(a)) allDims[String(pos)] = `${a.length}x${a[0].length}`;
+  });
+  const promptNarrative = cfg.includeNarrative ? (puzzle.narrative || "") : "";
+  const promptDims = cfg.includeSizes ? allDims : null;
+  const maxTokens = cfg.thinking ? 32768 : 8192;
+
+  const img = await imageForPuzzle(entry);
+  const rec = baseJsonlRecord(puzzle, entry.name, item.model, cfg, item.experiment, img.name, img.source);
+
+  let content, prompt;
+  if (item.experiment === "blind_solve") {
+    prompt = narcSolvePromptImage(promptNarrative, masked, promptDims);
+    content = [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: img.url } }];
+  } else if (item.experiment === "reconstruct") {
+    prompt = NARC_RECOVER_PROMPT;
+    content = [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: img.url } }];
+  } else {
+    const recon = reconCache.get(`${entry.id}|${item.model}`);
+    if (!recon || !Object.keys(recon.frames || {}).length) {
+      // Nothing to solve from — a downstream consequence of experiment 2, not
+      // an independent failure, so it is recorded as skipped.
+      rec.skipped = true;
+      rec.error = "reconstruction produced no parseable sequence JSON";
+      await jsonl.append(rec);
+      return "skipped — no reconstruction";
+    }
+    const maskedSet = new Set(masked.map(Number));
+    const visible = Object.entries(recon.frames)
+      .filter(([p]) => !maskedSet.has(Number(p)))          // never feed back a hallucinated answer
+      .map(([p, g]) => ({ position: Number(p), grid: g }))
+      .sort((a, b) => a.position - b.position);
+    const seqJson = JSON.stringify({ title: recon.title || puzzle.title || "", sequence: visible });
+    prompt = narcSolvePromptText(seqJson, promptNarrative, masked, promptDims);
+    rec.solved_from_json = seqJson;
+    content = prompt;
+  }
+  rec.prompt = prompt;
+
+  const t0 = performance.now();
+  const res = await callMindRouter({
+    model: item.model, messages: [{ role: "user", content }],
+    thinking: cfg.thinking, jsonMode: true, maxTokens,
+    signal: batch.abort.signal,
+    onProgress: (n, msg) => setBatchStatus(msg
+      ? `<span class="live">${escapeHtml(msg)}</span>`
+      : `Running ${batch.cursor + 1}/${batch.queue.length} — ${entry.id} · ${item.model} · ${item.experiment} <span class="live">streaming… ${Number(n).toLocaleString()} chars</span>`),
+  });
+
+  rec.latency_ms = Math.round(performance.now() - t0);
+  rec.raw = res.content;
+  rec.reasoning = res.reasoning;
+  rec.content_chars = res.content.length;
+  rec.reasoning_chars = res.reasoning.length;
+  // Reasoning but no answer is the Week 4 runaway-reasoning failure, not a refusal.
+  rec.truncated = !!res.reasoning && !res.content.trim();
+
+  const { parsed, repaired } = parseWithRepairFlag(res.content);
+  rec.parsed = parsed !== null;
+  rec.parse_needed_repair = repaired;
+
+  let note;
+  if (item.experiment === "reconstruct") {
+    const frames = extractSequenceMap(parsed);
+    const title = (parsed && typeof parsed === "object" && parsed.title) || "";
+    rec.predicted = { title, frames };
+    reconCache.set(`${entry.id}|${item.model}`, { title, frames });
+    const visible = narcVisibleFrames(puzzle);
+    const q = visible.map(f => shapeColorQuick(frames[String(f.position)], f.grid));
+    const cells = q.reduce((s, x) => s + x.cells, 0);
+    const wavg = (sel) => cells ? q.reduce((s, x) => s + (x[sel] || 0) * x.cells, 0) / cells : 0;
+    note = parsed === null ? "unparsed"
+      : `${Object.keys(frames).length}/${visible.length} frames · cell ${wavg("cell").toFixed(0)}% · shape ${wavg("shape").toFixed(0)}% · color ${wavg("color").toFixed(0)}%`;
+  } else {
+    const answers = extractAnswersMap(parsed, masked);
+    rec.predicted = { answers };
+    const scored = narcScore(answers, answerGrids, masked);
+    const q = masked.map(p => shapeColorQuick(answers[String(p)], answerGrids[String(p)] || []));
+    const cells = q.reduce((s, x) => s + x.cells, 0);
+    const wavg = (sel) => cells ? q.reduce((s, x) => s + (x[sel] || 0) * x.cells, 0) / cells : 0;
+    note = parsed === null ? "unparsed"
+      : `${scored.solved ? "SOLVED" : "not solved"} · cell ${wavg("cell").toFixed(0)}% · shape ${wavg("shape").toFixed(0)}% · color ${wavg("color").toFixed(0)}%`;
+  }
+
+  await jsonl.append(rec);
+  return note;
+}
+
+function stopBatch() {
+  batch.running = false;
+  batch.paused = false;
+  if (batch.abort) batch.abort.abort();
+  setBatchStatus("Stopped.");
+}
+
+function togglePause() {
+  batch.paused = !batch.paused;
+  $("batchPause").textContent = batch.paused ? "▶ Resume" : "⏸ Pause";
+  if (batch.paused) setBatchStatus("Paused — will resume after the current request.");
+}
+
+// Load an existing results.jsonl so a sweep can pick up where another run (here
+// or in Python) left off.
+async function loadBatchResume(file) {
+  batch.doneKeys.clear();
+  const text = await file.text();
+  let bad = 0;
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const rec = JSON.parse(line);
+      if (rec.run_key && !rec.error) batch.doneKeys.add(rec.run_key);
+    } catch { bad++; }
+  }
+  $("batchInfo").innerHTML = `<span class="ok">${batch.doneKeys.size} completed experiment(s)</span> loaded from ${escapeHtml(file.name)} — these will be skipped.` +
+    (bad ? ` <span style="color:#d29922">(${bad} unreadable line(s))</span>` : "");
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Results rendering
@@ -751,6 +1825,14 @@ function statBox(num, lbl, tone) {
   return `<div class="stat-box"><div class="stat-num${cls}">${num}</div><div class="stat-lbl">${lbl}</div></div>`;
 }
 function tone(pct) { return pct >= 99.9 ? "" : pct >= 70 ? "warn" : "bad"; }
+
+// The exact prompt text sent to the model for this experiment (image sent separately
+// where applicable), kept in the log for review — including any NARC toggle effects.
+function promptBlock(exp) {
+  return exp && exp.prompt
+    ? `<details><summary>Prompt sent to the model</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.prompt)}</pre></div></details>`
+    : "";
+}
 
 function renderGrid(grid, mask, label) {
   const g = gridToInt(grid);
@@ -786,6 +1868,7 @@ function solveDetail(exp, truthOut, title, extra) {
       <div class="arrow">vs</div>
       ${renderGrid(truthOut, null, "Truth output")}
     </div>
+    ${promptBlock(exp)}
     ${exp.reasoning ? `<details><summary>Reasoning trace (${exp.reasoning.length.toLocaleString()} chars)</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.reasoning)}</pre></div></details>` : ""}
     <details><summary>Raw response</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.raw || "(empty)")}</pre></div></details>`;
 }
@@ -816,11 +1899,36 @@ function reconDetail(exp, truth) {
   });
   return `<h3 class="exp-h">Reconstruction <span style="color:#8b949e;font-size:0.75rem">visible-cell accuracy ${exp.recon.pct.toFixed(1)}% (${exp.recon.cells - exp.recon.errors}/${exp.recon.cells})</span></h3>
     ${pairsHtml}
+    ${promptBlock(exp)}
     ${exp.reasoning ? `<details><summary>Reasoning trace (${exp.reasoning.length.toLocaleString()} chars)</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.reasoning)}</pre></div></details>` : ""}
     <details><summary>Raw response</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.raw || "(empty)")}</pre></div></details>`;
 }
 
+// Shared run-card chrome (header + stat row + collapsible details body).
+function runCardShell(rec, i, kindBadge, statHtml, detailsHtml, subMeta) {
+  const thinkBadge = rec.thinking ? '<span class="badge thinking">thinking</span>' : '<span class="badge nothink">no-think</span>';
+  const imgBadge = rec.imageName ? ` <span class="badge" style="background:#d29922" title="Custom image sent instead of the JSON-generated one: ${escapeAttr(rec.imageName)}">custom image</span>` : "";
+  const imgSummary = rec.imageName ? `Puzzle image sent to the model — custom override: ${escapeHtml(rec.imageName)}` : "Puzzle image sent to the model";
+  const previewImg = rec.image ? `<details><summary>${imgSummary}</summary><div class="details-body"><img class="preview-img" src="${rec.image}" /></div></details>` : "";
+  return `<div class="run-card">
+    <div class="rc-head">
+      <div><div class="rc-title">${escapeHtml(rec.puzzleName)} ${kindBadge} ${thinkBadge}${imgBadge}</div>
+        <div class="rc-meta">${escapeHtml(rec.model)} · ${new Date(rec.timestamp).toLocaleString()}${subMeta || ""}</div></div>
+      <button class="secondary" style="font-size:0.72rem;padding:5px 11px" onclick="retryRun(${i})" title="Re-run all three with this run's model, thinking mode, and puzzle image">↻ Run again</button>
+    </div>
+    <div class="stat-row">${statHtml}</div>
+    <details><summary>Details</summary><div class="details-body">
+      ${previewImg}
+      ${detailsHtml}
+    </div></details>
+  </div>`;
+}
+
 function renderRun(rec, i) {
+  return (rec.kind === "narc") ? renderNarcRun(rec, i) : renderMarcRun(rec, i);
+}
+
+function renderMarcRun(rec, i) {
   const truthOut = gridToInt((rec.truth.test[0] || {}).output || []);
   const bs = rec.experiments.blindSolve, rc = rec.experiments.reconstruct, rs = rec.experiments.reconSolve;
   const bsNum = bs ? (bs.parsed ? (bs.solved ? "✓" : bs.cell.pct.toFixed(0) + "%") : "—") : "—";
@@ -829,28 +1937,128 @@ function renderRun(rec, i) {
   const bsTone = bs && bs.parsed ? (bs.solved ? "" : tone(bs.cell.pct)) : "bad";
   const rcTone = rc && rc.parsed ? tone(rc.recon.pct) : "bad";
   const rsTone = rs && !rs.skipped && rs.parsed ? (rs.solved ? "" : tone(rs.cell.pct)) : "bad";
-  const thinkBadge = rec.thinking ? '<span class="badge thinking">thinking</span>' : '<span class="badge nothink">no-think</span>';
 
-  const previewImg = rec.image ? `<details><summary>Puzzle image sent to the model</summary><div class="details-body"><img class="preview-img" src="${rec.image}" /></div></details>` : "";
+  const statHtml = statBox(bsNum, "Blind solve", bsTone) + statBox(rcNum, "Reconstruction", rcTone) + statBox(rsNum, "Recon → solve", rsTone);
+  const detailsHtml = `
+    ${solveDetail(bs, truthOut, "Blind solve", "")}
+    ${reconDetail(rc, rec.truth)}
+    ${solveDetail(rs, truthOut, "Reconstruct → solve", rs && rs.solvedFromJson ? `<details><summary>Reconstructed JSON it solved from</summary><div class="details-body"><pre class="raw">${escapeHtml(rs.solvedFromJson)}</pre></div></details>` : "")}`;
+  return runCardShell(rec, i, '<span class="badge" style="background:#1f6feb">MARC</span>', statHtml, detailsHtml,
+    rec.metaphor ? " · “" + escapeHtml(rec.metaphor) + "”" : "");
+}
 
-  return `<div class="run-card">
-    <div class="rc-head">
-      <div><div class="rc-title">${escapeHtml(rec.puzzleName)} ${thinkBadge}</div>
-        <div class="rc-meta">${escapeHtml(rec.model)} · ${new Date(rec.timestamp).toLocaleString()}${rec.metaphor ? " · “" + escapeHtml(rec.metaphor) + "”" : ""}</div></div>
-      <button class="secondary" style="font-size:0.72rem;padding:5px 11px" onclick="retryRun(${i})" title="Re-run all three with this run's model, thinking mode, and puzzle image">↻ Run again</button>
-    </div>
-    <div class="stat-row">
-      ${statBox(bsNum, "Blind solve", bsTone)}
-      ${statBox(rcNum, "Reconstruction", rcTone)}
-      ${statBox(rsNum, "Recon → solve", rsTone)}
-    </div>
-    <details><summary>Details</summary><div class="details-body">
-      ${previewImg}
-      ${solveDetail(bs, truthOut, "Blind solve", "")}
-      ${reconDetail(rc, rec.truth)}
-      ${solveDetail(rs, truthOut, "Reconstruct → solve", rs && rs.solvedFromJson ? `<details><summary>Reconstructed JSON it solved from</summary><div class="details-body"><pre class="raw">${escapeHtml(rs.solvedFromJson)}</pre></div></details>` : "")}
-    </div></details>
+// NARC: show blind-solve / reconstruction / recon→solve stats, then per-masked-frame
+// model-vs-truth grids for the two solve experiments.
+function narcSolveDetail(exp, title, masked, extra) {
+  if (!exp) return "";
+  if (exp.skipped) return `<h3 class="exp-h">${title}</h3><div class="empty-note">Skipped — ${escapeHtml(exp.reason || "")}</div>`;
+  const nSolved = (exp.perFrame || []).filter(f => f.solved).length;
+  const verdict = exp.parsed
+    ? `<span class="badge ${exp.solved ? "solved" : "failed"}">${exp.solved ? "ALL SOLVED" : `${nSolved}/${(exp.perFrame || []).length} frames`}</span> <span style="color:#8b949e;font-size:0.75rem">cell ${exp.cell.pct.toFixed(1)}%</span>`
+    : `<span class="badge failed">no JSON</span>`;
+  let framesHtml = "";
+  (exp.perFrame || []).forEach(f => {
+    const mask = f.predicted ? diffMask(f.predicted, f.truth) : null;
+    framesHtml += `<div style="margin:8px 0"><div class="grid-label">Masked frame ${escapeHtml(f.pos)} ${f.parsed ? `<span class="badge ${f.solved ? "solved" : "failed"}" style="font-size:0.6rem">${f.solved ? "solved" : "cell " + f.cell.pct.toFixed(0) + "%"}</span>` : '<span class="badge failed" style="font-size:0.6rem">missing</span>'}</div>
+      <div class="pair-row">${renderGrid(f.predicted || [], mask, "Model")}<div class="arrow">vs</div>${renderGrid(f.truth, null, "Truth")}</div></div>`;
+  });
+  return `<h3 class="exp-h">${title} ${verdict}</h3>
+    ${exp.parsed ? splitLine(narcSolveSplit(exp)) : ""}
+    ${extra || ""}
+    ${framesHtml}
+    ${promptBlock(exp)}
+    ${exp.reasoning ? `<details><summary>Reasoning trace (${exp.reasoning.length.toLocaleString()} chars)</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.reasoning)}</pre></div></details>` : ""}
+    <details><summary>Raw response</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.raw || "(empty)")}</pre></div></details>`;
+}
+
+// One aggregate cell-accuracy number hides the distinction the whole project
+// turns on: reading WHERE things are vs. WHAT COLOUR they are. Show both.
+// (These are for the eye only — narc_score.py computes the numbers of record.)
+function splitLine(s) {
+  if (!s || !s.cells) return "";
+  const f = v => v === null ? "n/a" : v.toFixed(1) + "%";
+  return `<div style="font-size:0.75rem;color:#8b949e;margin:2px 0 8px">
+    shape <strong style="color:#e6edf3">${f(s.shape)}</strong> <span title="background-vs-not, over every cell">(where)</span>
+    &nbsp;·&nbsp; color <strong style="color:#e6edf3">${f(s.color)}</strong> <span title="digit correctness on cells both model and truth call foreground">(what)</span>
   </div>`;
+}
+
+// Weight each frame by how many cells it actually contributed — colour by the
+// co-foreground cells it was measured over, not by total cells, or a mostly
+// blank frame would drag the colour figure toward whatever few pixels it had.
+function mergeSplits(list) {
+  const w = (sel, weightKey) => {
+    let num = 0, den = 0;
+    list.forEach(x => { if (x[sel] !== null) { num += x[sel] * x[weightKey]; den += x[weightKey]; } });
+    return den ? num / den : null;
+  };
+  return {
+    cells: list.reduce((s, x) => s + x.cells, 0),
+    cell: w("cell", "cells"),
+    shape: w("shape", "cells"),
+    color: w("color", "pairs"),
+  };
+}
+
+function narcReconSplit(exp, truth) {
+  const modelByPos = (exp.recon && exp.recon.modelByPos) || {};
+  return mergeSplits(narcVisibleFrames(truth).map(f => shapeColorQuick(modelByPos[String(f.position)], f.grid)));
+}
+
+function narcSolveSplit(exp) {
+  return mergeSplits(((exp && exp.perFrame) || []).map(f => shapeColorQuick(f.predicted, f.truth)));
+}
+
+function narcReconDetail(exp, truth) {
+  if (!exp) return "";
+  if (!exp.parsed) return `<h3 class="exp-h">Reconstruction <span class="badge failed">no JSON</span></h3>
+    ${exp.reasoning ? `<details open><summary>Reasoning trace (${exp.reasoning.length.toLocaleString()} chars)</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.reasoning)}</pre></div></details>` : ""}
+    <details><summary>Raw response</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.raw || "(empty)")}</pre></div></details>`;
+  const modelByPos = (exp.recon && exp.recon.modelByPos) || {};
+  const maskedSet = new Set(narcMaskedPositions(truth).map(Number));
+  let framesHtml = "";
+  (truth.sequence || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).forEach(f => {
+    const isMasked = maskedSet.has(Number(f.position));
+    const tGrid = gridToInt(f.grid);
+    if (isMasked) {
+      framesHtml += `<div style="margin:8px 0"><div class="grid-label">Frame ${f.position} <span style="color:#1f6feb">(masked — not scored here)</span></div></div>`;
+      return;
+    }
+    const mGrid = gridToInt(modelByPos[String(f.position)] || []);
+    framesHtml += `<div style="margin:8px 0"><div class="grid-label">Frame ${f.position}</div>
+      <div class="pair-row"><div class="pair-who">Model</div>${renderGrid(mGrid, mGrid.length && tGrid.length ? diffMask(mGrid, tGrid) : null, "")}<div class="arrow">vs</div><div class="pair-who">Truth</div>${renderGrid(tGrid, null, "")}</div></div>`;
+  });
+  return `<h3 class="exp-h">Reconstruction <span style="color:#8b949e;font-size:0.75rem">visible-cell accuracy ${exp.recon.pct.toFixed(1)}% (${exp.recon.cells - exp.recon.errors}/${exp.recon.cells})</span></h3>
+    ${splitLine(narcReconSplit(exp, truth))}
+    ${framesHtml}
+    ${promptBlock(exp)}
+    ${exp.reasoning ? `<details><summary>Reasoning trace (${exp.reasoning.length.toLocaleString()} chars)</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.reasoning)}</pre></div></details>` : ""}
+    <details><summary>Raw response</summary><div class="details-body"><pre class="raw">${escapeHtml(exp.raw || "(empty)")}</pre></div></details>`;
+}
+
+function renderNarcRun(rec, i) {
+  const bs = rec.experiments.blindSolve, rc = rec.experiments.reconstruct, rs = rec.experiments.reconSolve;
+  const masked = rec.truth.masked_positions || [];
+  const solveNum = (e) => e ? (e.skipped ? "skip" : (e.parsed ? (e.solved ? "✓" : e.cell.pct.toFixed(0) + "%") : "—")) : "—";
+  const solveTone = (e) => e && !e.skipped && e.parsed ? (e.solved ? "" : tone(e.cell.pct)) : "bad";
+  const rcNum = rc ? (rc.parsed ? rc.recon.pct.toFixed(0) + "%" : "—") : "—";
+  const rcTone = rc && rc.parsed ? tone(rc.recon.pct) : "bad";
+
+  // Older logs predate the toggles → default to "included" (their prior behaviour).
+  const narrOn = rec.includeNarrative !== false, sizesOn = rec.includeSizes !== false;
+
+  const statHtml = statBox(solveNum(bs), "Blind solve", solveTone(bs)) + statBox(rcNum, "Reconstruction", rcTone) + statBox(solveNum(rs), "Recon → solve", solveTone(rs));
+  const narrativeHtml = rec.narrative
+    ? `<details><summary>Narrative ${narrOn ? "given to the model" : "(withheld from the model this run)"}</summary><div class="details-body"><pre class="raw" style="white-space:pre-wrap">${escapeHtml(rec.narrative)}</pre></div></details>`
+    : "";
+  const detailsHtml = `
+    ${narrativeHtml}
+    ${narcSolveDetail(bs, "Blind solve", masked, "")}
+    ${narcReconDetail(rc, rec.truth)}
+    ${narcSolveDetail(rs, "Reconstruct → solve", masked, rs && rs.solvedFromJson ? `<details><summary>Reconstructed sequence JSON it solved from</summary><div class="details-body"><pre class="raw">${escapeHtml(rs.solvedFromJson)}</pre></div></details>` : "")}`;
+  const inputsBadge = ` <span class="badge" style="background:${narrOn ? "#238636" : "#6e7681"}" title="Narrative ${narrOn ? "included in" : "withheld from"} the solve prompts">narr ${narrOn ? "on" : "off"}</span> <span class="badge" style="background:${sizesOn ? "#238636" : "#6e7681"}" title="Masked-frame grid sizes ${sizesOn ? "included in" : "withheld from"} the solve prompts">sizes ${sizesOn ? "on" : "off"}</span>`;
+  const subMeta = ` · ${masked.length} masked${rec.title ? " · “" + escapeHtml(rec.title) + "”" : ""}`;
+  return runCardShell(rec, i, '<span class="badge" style="background:#6e40c9">NARC</span>' + inputsBadge, statHtml, detailsHtml, subMeta);
 }
 
 function renderResults() {
@@ -863,13 +2071,74 @@ function renderResults() {
 // ─────────────────────────────────────────────────────────────────────────
 // Log persistence
 // ─────────────────────────────────────────────────────────────────────────
-function saveRuns() {
-  try { localStorage.setItem(LS.runs, JSON.stringify(runs)); }
-  catch (e) { $("logStatus").innerHTML = `<span style="color:#d29922">In-memory only — browser storage full (${runs.length} runs). Download to keep them.</span>`; }
+// Runs live in IndexedDB, not localStorage. Every run carries a full base64 PNG,
+// so the old localStorage store (~5MB) overflowed after a few dozen runs and
+// silently degraded to in-memory — which made a long sweep impossible. IndexedDB
+// has no comparable cap. Config stays in localStorage; it's tiny.
+const IDB_NAME = "mba", IDB_STORE = "runs", IDB_VERSION = 1;
+let idbHandle = null;
+
+function idb() {
+  if (idbHandle) return idbHandle;
+  idbHandle = new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE, { keyPath: "id" });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return idbHandle;
 }
-function loadRuns() {
-  try { runs = JSON.parse(localStorage.getItem(LS.runs) || "[]"); if (!Array.isArray(runs)) runs = []; }
-  catch { runs = []; }
+
+// Resolves with the request's result once the whole transaction commits, so a
+// caller can `await` either a read or a write without juggling two event models.
+async function idbTx(mode, fn) {
+  const db = await idb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, mode);
+    let req;
+    try { req = fn(tx.objectStore(IDB_STORE)); }
+    catch (e) { reject(e); return; }
+    tx.oncomplete = () => resolve(req && "result" in req ? req.result : undefined);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+// The single-puzzle flow keeps every run for its rich card. Batch mode does NOT
+// push runs here — its output is the JSONL file on disk, so hundreds of runs
+// never have to fit in memory at once.
+async function saveRuns() {
+  try {
+    await idbTx("readwrite", store => {
+      store.clear();
+      runs.forEach((r, i) => store.put({ id: i, run: r }));
+    });
+    return true;
+  } catch (e) {
+    $("logStatus").innerHTML = `<span style="color:#d29922">In-memory only — could not write to browser storage (${e.message || e}). Download to keep these runs.</span>`;
+    return false;
+  }
+}
+
+async function loadRuns() {
+  // One-time migration off the old localStorage store, then get out of its way.
+  try {
+    const legacy = localStorage.getItem(LS.runs);
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      if (Array.isArray(parsed) && parsed.length) { runs = parsed; await saveRuns(); }
+      localStorage.removeItem(LS.runs);
+      return;
+    }
+  } catch { /* fall through to IndexedDB */ }
+
+  try {
+    const list = (await idbTx("readonly", store => store.getAll())) || [];
+    runs = list.sort((a, b) => a.id - b.id).map(r => r.run).filter(Boolean);
+  } catch { runs = []; }
 }
 function downloadLog() {
   if (!runs.length) { $("logStatus").textContent = "Nothing to download."; return; }
@@ -907,11 +2176,14 @@ function escapeAttr(s) { return escapeHtml(s); }
 loadConfig();
 bindConfigPersistence();
 initModels();
-loadRuns();
 renderResults();
+loadRuns().then(renderResults);      // IndexedDB is async; paint twice rather than block
 
 $("refreshModels").addEventListener("click", refreshModels);
 $("puzzleFile").addEventListener("change", e => { if (e.target.files[0]) onPuzzleFile(e.target.files[0]); });
+$("overrideImgBtn").addEventListener("click", () => $("overrideImgFile").click());
+$("overrideImgFile").addEventListener("change", e => { if (e.target.files[0]) onOverrideImage(e.target.files[0]); e.target.value = ""; });
+$("useGeneratedBtn").addEventListener("click", useGeneratedImage);
 $("model").addEventListener("input", setRunEnabled);
 $("baseUrl").addEventListener("input", setRunEnabled);
 $("runBtn").addEventListener("click", runAll);
@@ -919,6 +2191,24 @@ $("downloadLog").addEventListener("click", downloadLog);
 $("clearLog").addEventListener("click", () => { if (confirm("Clear all runs from this browser's log? (Downloaded files are unaffected.)")) { runs = []; saveRuns(); renderResults(); } });
 $("loadLogBtn").addEventListener("click", () => $("loadLogFile").click());
 $("loadLogFile").addEventListener("change", e => { if (e.target.files[0]) loadLog(e.target.files[0]); });
+
+// ── Batch sweep ──
+$("batchPuzzleDir").addEventListener("change", e => onBatchPuzzleDir(Array.from(e.target.files || [])));
+$("batchImageDir").addEventListener("change", e => onBatchImageDir(Array.from(e.target.files || [])));
+$("batchModels").addEventListener("input", rebuildQueue);
+$("batchStart").addEventListener("click", () => { startBatch().catch(e => setBatchError("Batch failed: " + (e.message || e))); });
+$("batchPause").addEventListener("click", togglePause);
+$("batchStop").addEventListener("click", stopBatch);
+$("batchDownload").addEventListener("click", () => { if (!jsonl.download()) setBatchError("Nothing buffered to download."); });
+$("batchResumeBtn").addEventListener("click", () => $("batchResumeFile").click());
+$("batchResumeFile").addEventListener("change", e => {
+  if (e.target.files[0]) loadBatchResume(e.target.files[0]).catch(err => setBatchError("Could not read results file: " + (err.message || err)));
+});
+// Leaving mid-sweep would silently drop queued work; make it a deliberate choice.
+window.addEventListener("beforeunload", e => {
+  if (batch.running) { e.preventDefault(); e.returnValue = ""; }
+});
+
 setRunEnabled();
 </script>
 </body>
