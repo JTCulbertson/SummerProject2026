@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 8 — Reading the Story: NARC Joins the Baseline Tool</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117; color: #e6edf3; padding: 24px 16px; line-height: 1.6;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back-link { display: inline-block; font-size: 0.82rem; color: #8b949e; margin-bottom: 18px; }
+    .back-link:hover { color: #e6edf3; }
+    .card {
+      background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+      padding: 22px 26px; margin-bottom: 20px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
+    h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 10px; color: #e6edf3; }
+    .meta-row { font-size: 0.8rem; color: #8b949e; display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+    .meta-row strong { color: #e6edf3; }
+    .tags { display: flex; gap: 6px; }
+    .tag { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px; background: rgba(188,140,255,0.15); color: #bc8cff; }
+    .sub { color: #c9d1d9; font-size: 0.95rem; }
+    p { margin-bottom: 0.8rem; }
+    p:last-child { margin-bottom: 0; }
+    code { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; font-size: 0.85em; font-family: "SF Mono", "Fira Code", monospace; }
+    .callout {
+      background: rgba(63,185,80,0.10); border-left: 3px solid #3fb950;
+      border-radius: 0 6px 6px 0; padding: 0.85rem 1.1rem; margin: 0.5rem 0 0.2rem;
+      font-size: 0.92rem; color: #e6edf3;
+    }
+    ul, ol { margin: 0.3rem 0 0.5rem 1.2rem; }
+    li { margin-bottom: 0.45rem; }
+    .cta {
+      display: inline-block; background: #238636; border: 1px solid #2ea043; color: #fff;
+      border-radius: 6px; padding: 0.55rem 1.1rem; font-weight: 600; font-size: 0.9rem; margin-top: 6px;
+    }
+    .cta:hover { background: #2ea043; text-decoration: none; }
+    .feature {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      padding: 14px 18px; margin-bottom: 12px;
+    }
+    .feature h3 { font-size: 0.95rem; margin-bottom: 5px; color: #bc8cff; }
+    .feature p { font-size: 0.9rem; margin: 0; color: #c9d1d9; }
+    .note { font-size: 0.82rem; color: #8b949e; }
+    .divider { border: none; border-top: 1px solid #30363d; margin: 4px 0 14px; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.4rem 0 0.2rem; }
+    table.data th, table.data td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #30363d; }
+    table.data th { color: #8b949e; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    table.data td.num { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="index.html">← Summer Project 2026</a>
+
+  <div class="card">
+    <h1>Week 8 — Reading the Story: NARC Joins the Baseline Tool</h1>
+    <div class="meta-row">
+      <span><strong>Week 8</strong></span>
+      <span>July 20, 2026</span>
+      <span class="tags"><span class="tag">Tools</span><span class="tag">Research</span></span>
+    </div>
+    <p class="sub">The Week 6 baseline tool could only measure one puzzle family — MARC, where a single hidden
+      answer is inferred from example pairs. This week it learned a second: <strong>NARC</strong>, where a short
+      story is told across an ordered sequence of grids and one or more frames are blanked out. The same three
+      experiments now run on both, and — after a NARC "solve" that looked too good to be true — we added the
+      controls needed to tell a real result from an easy one.</p>
+    <a class="cta" href="https://github.com/JTCulbertson/SummerProject2026/blob/main/code/tools/model-baseline-analysis.html">View the baseline tool on GitHub →</a>
+  </div>
+
+  <div class="card">
+    <h2>In Plain Terms</h2>
+    <div class="callout">A MARC puzzle gives the AI a few before-and-after examples and asks it to fill in one
+      missing answer. A <strong>NARC</strong> puzzle is different: it's a little comic strip. Several grids in a
+      row show a scene changing step by step — a game of Stump, say — with a written story describing what happens,
+      and one panel is hidden behind a "?". The AI has to figure out the missing panel from the story and the
+      panels around it. This week our measuring tool learned to read those comic strips too. Then something
+      surprising happened: on the very first try, a model got a hidden panel <em>exactly</em> right — even though
+      the same models struggle badly with MARC. Before celebrating, we checked why, and the honest answer is less
+      exciting than it looked. So we also built switches to make the test fair.</div>
+  </div>
+
+  <div class="card">
+    <h2>Why Now</h2>
+    <p>Weeks 3–6 built a consistent picture of how models read MARC puzzles: shape almost perfectly, color only
+      partially. NARC puzzles stress a different muscle — following an ordered sequence and tying it to a
+      narrative — so bringing them onto the same measuring bench lets us compare the two kinds of reasoning with
+      one consistent scoring pipeline instead of two separate ones.</p>
+    <p>The trigger was practical, too: NARC puzzles were being authored and visualized, but there was no way to put
+      a model in front of them and score it. Extending the Week 6 tool — rather than writing a new one — means
+      every NARC run is measured exactly like a MARC run, and lands in the same log.</p>
+  </div>
+
+  <div class="card">
+    <h2>What Changed in the Tool</h2>
+    <p>The baseline tool now accepts both puzzle families and adapts to whichever it's given. It reads the JSON,
+      figures out the kind, and prompts the model accordingly — no mode switch to remember.</p>
+    <div class="feature">
+      <h3>Auto-detects MARC vs. NARC</h3>
+      <p>A NARC file (schema <code>narc-export-v1</code>, a <code>sequence</code> of frames plus a
+        <code>narrative</code>) is recognized automatically and rendered as an ordered strip — frames left-to-right
+        with arrows between them, and each masked frame drawn as a "?". MARC files behave exactly as before.</p>
+    </div>
+    <div class="feature">
+      <h3>NARC-aware prompting</h3>
+      <p>The model is told this is a narrative sequence, that the <strong>order of frames is the story</strong>, and
+        that there may be <strong>more than one</strong> masked frame — each identified by its position. It runs the
+        same three experiments as MARC: blind solve, reconstruct, and reconstruct-then-solve.</p>
+    </div>
+    <div class="feature">
+      <h3>Per-frame scoring</h3>
+      <p>Every masked frame is scored against ground truth; a run counts as "solved" only if <em>all</em> masked
+        frames match exactly, with per-frame cell accuracy shown alongside.</p>
+    </div>
+    <div class="feature">
+      <h3>Image override</h3>
+      <p>The rendered image is always generated from the JSON, but you can now upload a <strong>custom image</strong>
+        in its place while keeping the same JSON, prompts, and ground-truth scoring — so alternate representations
+        (including the Week 7 greyscale encodings) can be tested head-to-head on identical scoring.</p>
+    </div>
+    <div class="feature">
+      <h3>Full prompt captured in the log</h3>
+      <p>Each experiment now records the exact prompt text that was sent, viewable in the run's details for later
+        review — so it's always clear what the model actually saw.</p>
+    </div>
+    <p class="note">A rendering bug was also fixed along the way: the diagonal shading on masked frames was
+      bleeding over neighboring grids, which could have interfered with how a model read the image.</p>
+  </div>
+
+  <div class="card">
+    <h2>The Result That Started It</h2>
+    <p>On the first NARC test, a model <strong>blind-solved</strong> a hidden frame exactly — a sharp contrast with
+      how much these same models struggle to even reconstruct MARC grids. Tempting to call it a breakthrough. It
+      isn't, and the numbers say why. A NARC masked frame is usually a near-copy of the frame just before it:</p>
+    <table class="data">
+      <thead><tr><th>Puzzle</th><th>Masked cells</th><th>Identical to previous frame</th><th>Cells that actually change</th></tr></thead>
+      <tbody>
+        <tr><td>The Ghost of the Tortoise</td><td class="num">25</td><td class="num">92%</td><td class="num">2</td></tr>
+        <tr><td>Stump</td><td class="num">150</td><td class="num">87%</td><td class="num">20</td></tr>
+      </tbody>
+    </table>
+    <p>The tortoise frame is the previous frame with <strong>two cells changed</strong> — and the narrative
+      describes which two. That's "copy the last panel, apply a narrated tweak," not the abstract rule-induction
+      MARC demands. Add that the written story can hand over the answer in plain language, and an exact solve says
+      more about <em>low edit-distance plus a language shortcut</em> than about a model suddenly reading grids well.
+      One easy puzzle is an anecdote, not a finding.</p>
+  </div>
+
+  <div class="card">
+    <h2>Making the Test Fair</h2>
+    <p>To separate "NARC is genuinely easier" from "the extras gave it away," the tool now exposes what the model is
+      told besides the image, as two switches:</p>
+    <ul>
+      <li><strong>Include the narrative</strong> — off means the model solves from the frames alone. If accuracy
+        collapses without the story, it was leaning on language, not pixels.</li>
+      <li><strong>Include masked-frame grid sizes</strong> — off means the model has to infer the output shape,
+        putting NARC on the same footing as MARC blind-solve, which never gets a size hint.</li>
+    </ul>
+    <p>Both default on (preserving prior behavior), both are recorded per run, and each run's card shows which were
+      active — so a run's score can never be misread as more (or less) impressive than the inputs it was given.</p>
+  </div>
+
+  <div class="card">
+    <h2>How to Use It</h2>
+    <ol>
+      <li>Open <code>code/tools/model-baseline-analysis.html</code> locally and start the bundled proxy
+        (<code>uv run code/scripts/cors_proxy.py</code>) so the browser can reach MindRouter.</li>
+      <li>Pick a model, then load a puzzle — a MARC file from <code>code/puzzles/</code> or a NARC file from
+        <code>code/narc_puzzles/</code>. The kind is detected for you.</li>
+      <li>For NARC, choose whether to include the narrative and the grid sizes, or leave both on.</li>
+      <li>Optionally override the image to test an alternate representation on the same scoring.</li>
+      <li><strong>Run the three experiments</strong>, then open a run's details to inspect per-frame grids, the exact
+        prompt sent, and the model's reasoning.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Next Steps</h2>
+    <div class="callout">With NARC on the bench and fair controls in place, the plan is to run the narrative-on /
+      narrative-off comparison across several puzzles and models to quantify how much models lean on the story
+      versus the grids — and to fold in the Week 7 greyscale encodings via the image override, testing whether a
+      color-free representation changes the picture on sequences too. A copy-the-previous-frame baseline is the
+      natural yardstick to report every NARC score against.</div>
+    <p class="note" style="margin-top:0.8rem">Related: <a href="report-week7.html">Week 7 — Greyscale Pattern Lab</a> ·
+      <a href="report-week6.html">Week 6 — Baseline tool</a> ·
+      <a href="report-week5.html">Week 5 — Cross-model</a>.</p>
+  </div>
+</div>
+</body>
+</html>

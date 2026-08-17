@@ -1,547 +1,703 @@
-<!DOCTYPE html>
+/<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NARC Visualizer</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NARC Visualizer</title>
+<script>
+  // Apply saved theme before paint to avoid a flash.
+  (function () {
+    try {
+      var saved = localStorage.getItem("narc-visualizer-theme");
+      var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if ((saved || (prefersDark ? "dark" : "light")) === "light")
+        document.documentElement.dataset.theme = "light";
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel2: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --link: #58a6ff;
+    --accent: #238636;
+    --accent-hover: #2ea043;
+    --accent-glow: rgba(63,185,80,0.12);
+    --masked-a: #1c2128;
+    --masked-b: #21262d;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff;
+    --panel: #f6f8fa;
+    --panel2: #eef1f4;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #636e7b;
+    --link: #0969da;
+    --accent: #1a7f37;
+    --accent-hover: #1f9c40;
+    --accent-glow: rgba(26,127,55,0.08);
+    --masked-a: #eef1f4;
+    --masked-b: #e2e6ea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    transition: background 0.2s, color 0.2s;
+  }
+  header {
+    padding: 1.2rem 2rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-top { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header h1 {
+    margin: 0; font-size: 1.3rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.02em;
+  }
+  .header-controls { display: flex; align-items: center; gap: .6rem; margin-left: auto; flex-wrap: wrap; }
+  select, input[type="text"] {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: .4rem .6rem;
+    font-size: .85rem;
+  }
+  button {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: .4rem .8rem; cursor: pointer; font-size: .82rem;
+  }
+  button:hover { border-color: var(--link); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .theme-toggle {
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--muted); cursor: pointer; padding: .4rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .theme-toggle svg { width: 15px; height: 15px; display: block; }
+  .theme-toggle:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-glow); }
+  .meme-card {
+    display: flex; align-items: center; gap: .5rem;
+    border: 1px solid var(--border); border-radius: 8px; padding: .4rem .7rem;
+    background: var(--panel); font-size: .82rem; font-weight: 600;
+  }
+  .meme-card .meme-emoji { font-size: 1.4rem; line-height: 1; }
+  .meme-card button { padding: .2rem .45rem; font-size: .85rem; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
-      min-height: 100vh;
-      line-height: 1.5;
-    }
+  main { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.5rem 4rem; }
 
-    /* ── Input screen ── */
-    #input-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 2rem;
-      gap: 1rem;
-    }
+  .narrative-block {
+    background: var(--accent-glow); border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0; padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+    font-size: .9rem; line-height: 1.65;
+  }
+  .puzzle-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .3rem; }
+  .puzzle-sub { color: var(--muted); font-size: .78rem; margin-bottom: .5rem; }
 
-    #input-screen h1 {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: #3fb950;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      margin-bottom: 0.25rem;
-    }
+  .section-label {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .1em;
+    font-weight: 700; color: var(--accent); margin: 1.6rem 0 .7rem;
+    padding-bottom: .35rem; border-bottom: 1px solid var(--border);
+  }
+  .section-label:first-of-type { margin-top: 0; }
 
-    #input-screen p {
-      font-size: 0.85rem;
-      color: #8b949e;
-      margin-bottom: 0.5rem;
-    }
+  /* ── Custom load panel ── */
+  #custom-panel { display: none; }
+  #custom-panel textarea {
+    width: 100%; min-height: 130px; resize: vertical;
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .78rem; padding: .7rem; margin-bottom: .6rem;
+  }
+  #custom-panel.drag-over textarea { border-color: var(--accent); background: var(--accent-glow); }
+  .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .5rem; align-items: center; }
+  .drop-hint { font-size: .75rem; color: var(--muted); }
+  .error-box {
+    color: #f85149; background: rgba(248,81,73,0.08); border: 1px solid rgba(248,81,73,0.35);
+    border-radius: 6px; padding: .5rem .75rem; font-size: .82rem; margin: .5rem 0; white-space: pre-wrap;
+  }
 
-    #json-input {
-      width: 100%;
-      max-width: 680px;
-      height: 240px;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      color: #e6edf3;
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 0.78rem;
-      padding: 0.9rem 1rem;
-      resize: vertical;
-      outline: none;
-      transition: border-color 0.15s;
-    }
+  /* ── Settings bar ── */
+  .settings-bar {
+    display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: .7rem 1rem; margin-bottom: 1.2rem; font-size: .82rem;
+  }
+  .settings-bar .field { display: flex; align-items: center; gap: .5rem; }
+  .settings-bar label { color: var(--muted); white-space: nowrap; }
+  .chk { display: flex; align-items: center; gap: .35rem; cursor: pointer; color: var(--muted); }
+  input[type="range"] { width: 100px; }
+  .settings-bar .spacer { flex: 1; }
+  .reveal-wrap { display: flex; align-items: center; gap: .6rem; }
+  #celebrate-card { display: none; }
+  #celebrate-card.show { display: flex; }
 
-    #json-input:focus { border-color: #3fb950; }
+  /* ── Sequence ── */
+  .sequence-wrap { overflow-x: auto; padding-bottom: .5rem; }
+  .sequence-row { display: flex; gap: 1.1rem; padding-bottom: .25rem; width: max-content; }
+  .frame-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: .8rem .9rem .9rem; display: flex; flex-direction: column;
+    align-items: center; gap: .55rem; min-width: 0;
+  }
+  .frame-card.is-masked { border-color: var(--link); }
+  .frame-label {
+    font-family: ui-monospace, SFMono-Regular, monospace; font-size: .73rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+  }
+  .frame-label.masked-label { color: var(--link); }
+  .grid-table { border-collapse: collapse; }
+  .grid-table td { text-align: center; font-weight: 600; }
 
-    #json-input.drag-over {
-      border-color: #3fb950;
-      background: rgba(63,185,80,0.06);
-    }
+  .masked-placeholder {
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); border-radius: 3px;
+    background: repeating-linear-gradient(45deg, var(--masked-a), var(--masked-a) 4px, var(--masked-b) 4px, var(--masked-b) 8px);
+  }
+  .masked-q { font-size: 2rem; font-weight: 700; color: var(--link); opacity: .7; }
 
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.55rem 1.4rem;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: opacity 0.15s, background 0.15s;
-    }
-
-    .btn:hover { opacity: 0.85; }
-
-    .btn-primary { background: #238636; color: #fff; }
-    .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
-    .btn-accent { background: #1f6feb; color: #fff; }
-
-    #error-msg {
-      color: #f85149;
-      font-size: 0.82rem;
-      max-width: 680px;
-      text-align: center;
-    }
-
-    #drop-hint {
-      font-size: 0.75rem;
-      color: #8b949e;
-    }
-
-    /* ── Puzzle screen ── */
-    #puzzle-screen { display: none; }
-
-    .puzzle-header {
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
-      padding: 1.1rem 2rem;
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-    }
-
-    .puzzle-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #f0f6fc;
-    }
-
-    .meta-pill {
-      font-size: 0.72rem;
-      font-weight: 600;
-      background: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 20px;
-      padding: 0.2em 0.75em;
-      color: #8b949e;
-    }
-
-    .meta-pill span { color: #e6edf3; }
-
-    .header-actions {
-      margin-left: auto;
-      display: flex;
-      gap: 0.6rem;
-    }
-
-    .puzzle-body {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
-    }
-
-    /* ── Narrative ── */
-    .narrative-block {
-      background: rgba(63,185,80,0.07);
-      border-left: 3px solid #3fb950;
-      border-radius: 0 6px 6px 0;
-      padding: 1rem 1.25rem;
-      margin-bottom: 2rem;
-      font-size: 0.9rem;
-      color: #c9d1d9;
-      line-height: 1.65;
-    }
-
-    .section-label {
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      font-weight: 700;
-      color: #3fb950;
-      margin-bottom: 0.75rem;
-      padding-bottom: 0.4rem;
-      border-bottom: 1px solid #30363d;
-    }
-
-    /* ── Sequence ── */
-    .sequence-wrap {
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
-    }
-
-    .sequence-row {
-      display: flex;
-      gap: 1.25rem;
-      padding-bottom: 0.25rem;
-      width: max-content;
-    }
-
-    .frame-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 0.85rem 1rem 1rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.6rem;
-      min-width: 0;
-    }
-
-    .frame-card.is-masked {
-      border-color: #388bfd44;
-      background: #161b22;
-    }
-
-    .frame-label {
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: #8b949e;
-    }
-
-    .frame-label.masked-label { color: #388bfd; }
-
-    .grid-table {
-      border-collapse: collapse;
-      border: 1px solid #30363d;
-    }
-
-    .grid-table td {
-      width: 28px;
-      height: 28px;
-      font-size: 9px;
-      font-weight: 600;
-      text-align: center;
-      line-height: 28px;
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-
-    /* Masked placeholder */
-    .masked-placeholder {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid #30363d;
-      border-radius: 2px;
-      background: repeating-linear-gradient(
-        45deg,
-        #1c2128,
-        #1c2128 4px,
-        #21262d 4px,
-        #21262d 8px
-      );
-    }
-
-    .masked-q {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #388bfd;
-      opacity: 0.7;
-    }
-
-    /* ── Controls bar ── */
-    .controls-bar {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
-      flex-wrap: wrap;
-    }
-
-    /* ── Color legend ── */
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-top: 2rem;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      font-size: 0.72rem;
-      color: #8b949e;
-    }
-
-    .legend-swatch {
-      width: 16px;
-      height: 16px;
-      border-radius: 3px;
-      border: 1px solid rgba(255,255,255,0.12);
-      flex-shrink: 0;
-    }
-  </style>
+  /* ── Legend ── */
+  .legend { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .legend-item { display: flex; align-items: center; gap: .3rem; font-size: .72rem; color: var(--muted); }
+  .legend-swatch { width: 15px; height: 15px; border-radius: 3px; border: 1px solid var(--border); flex-shrink: 0; }
+  a { color: var(--link); }
+  code { background: var(--panel2); padding: .1rem .3rem; border-radius: 4px; font-size: .82em; }
+</style>
 </head>
 <body>
 
-<!-- ── Input screen ── -->
-<div id="input-screen">
-  <h1>NARC Visualizer</h1>
-  <p>Paste a NARC puzzle JSON below, or drag-and-drop a <code>.json</code> file anywhere on the page.</p>
-  <textarea id="json-input" placeholder="Paste NARC JSON here…" spellcheck="false"></textarea>
-  <div id="error-msg"></div>
-  <button class="btn btn-primary" onclick="loadFromTextarea()">Visualize</button>
-  <div id="drop-hint">or drag &amp; drop a .json file</div>
-</div>
-
-<!-- ── Puzzle screen ── -->
-<div id="puzzle-screen">
-  <div class="puzzle-header">
-    <div class="puzzle-title" id="ph-title"></div>
-    <div class="meta-pill">ID: <span id="ph-id"></span></div>
-    <div class="meta-pill">Creator: <span id="ph-creator"></span></div>
-    <div class="meta-pill" id="ph-diff-pill" style="display:none">Difficulty: <span id="ph-diff"></span></div>
-    <div class="header-actions">
-      <button class="btn btn-secondary" onclick="resetToInput()">← Load New Puzzle</button>
+<header>
+  <div class="header-top">
+    <h1>NARC Visualizer</h1>
+    <div class="meme-card" id="mood-wrap">
+      <span class="meme-emoji" id="mood-emoji"></span>
+      <span id="mood-caption"></span>
+      <button id="mood-reroll" title="New mood">🔁</button>
+    </div>
+    <div class="header-controls">
+      <select id="puzzle-picker">
+        <option value="stump">Stump</option>
+        <option value="tortoise">The Ghost of the Tortoise</option>
+        <option value="lunch">Lunch</option>
+        <option value="custom">Custom (paste / upload)…</option>
+      </select>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle light/dark theme" title="Toggle theme">
+        <svg id="icon-moon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M6 .278a.768.768 0 01.08.858 7.208 7.208 0 00-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 01.81.316.733.733 0 01-.031.893A8.349 8.349 0 018.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 016 .278z"/>
+        </svg>
+        <svg id="icon-sun" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style="display:none">
+          <path d="M8 12a4 4 0 100-8 4 4 0 000 8zM8 0a.5.5 0 01.5.5v2a.5.5 0 01-1 0v-2A.5.5 0 018 0zm0 13a.5.5 0 01.5.5v2a.5.5 0 01-1 0v-2A.5.5 0 018 13zm8-5a.5.5 0 01-.5.5h-2a.5.5 0 010-1h2a.5.5 0 01.5.5zM3 8a.5.5 0 01-.5.5h-2a.5.5 0 010-1h2A.5.5 0 013 8zm10.657-5.657a.5.5 0 010 .707l-1.414 1.415a.5.5 0 11-.707-.707l1.414-1.414a.5.5 0 01.707 0zm-9.193 9.193a.5.5 0 010 .707L3.05 13.657a.5.5 0 01-.707-.707l1.414-1.414a.5.5 0 01.707 0zm9.193 2.121a.5.5 0 01-.707 0l-1.414-1.414a.5.5 0 01.707-.707l1.414 1.414a.5.5 0 010 .707zM4.464 4.465a.5.5 0 01-.707 0L2.343 3.05a.5.5 0 11.707-.707l1.414 1.414a.5.5 0 010 .707z"/>
+        </svg>
+      </button>
     </div>
   </div>
+</header>
 
-  <div class="puzzle-body">
-    <!-- Narrative -->
-    <div class="section-label">Narrative</div>
+<main>
+  <!-- ── Custom puzzle load panel ── -->
+  <div id="custom-panel">
+    <div class="section-label">Load custom NARC puzzle JSON</div>
+    <textarea id="json-input" placeholder='Paste NARC JSON here (needs a "sequence" array)…' spellcheck="false"></textarea>
+    <div class="btn-row">
+      <button class="primary" id="load-custom-btn">Visualize</button>
+      <button id="upload-btn" type="button">Upload .json</button>
+      <input type="file" accept=".json,application/json" id="json-file" style="display:none">
+      <span class="drop-hint">or drag &amp; drop a .json file anywhere on the page</span>
+    </div>
+    <div id="error-msg" class="error-box" style="display:none"></div>
+  </div>
+
+  <!-- ── Puzzle view ── -->
+  <div id="puzzle-view">
+    <div class="puzzle-title" id="ph-title"></div>
+    <div class="puzzle-sub" id="ph-sub"></div>
     <div class="narrative-block" id="narrative-text"></div>
 
-    <!-- Sequence -->
-    <div class="section-label">Sequence</div>
-    <div class="controls-bar">
-      <button class="btn btn-accent" id="reveal-btn" onclick="toggleAnswers()">Reveal Answers</button>
-      <span id="masked-count" style="font-size:0.8rem;color:#8b949e;"></span>
+    <div class="settings-bar">
+      <div class="field">
+        <label>Cell size</label>
+        <input type="range" id="cell-size" min="16" max="48" value="32">
+        <span id="cell-size-v" style="width:2.6em;text-align:right">32px</span>
+      </div>
+      <label class="chk"><input type="checkbox" id="show-numbers" checked> Digit numbers</label>
+      <label class="chk"><input type="checkbox" id="show-grid" checked> Gridlines</label>
+      <label class="chk"><input type="checkbox" id="show-legend" checked> Color legend</label>
+      <label class="chk"><input type="checkbox" id="memes-enabled" checked> Meme banners</label>
+      <div class="spacer"></div>
+      <div class="reveal-wrap">
+        <span id="masked-count" style="color:var(--muted); font-size:.8rem"></span>
+        <button class="primary" id="reveal-btn">Reveal Answers</button>
+        <div class="meme-card" id="celebrate-card">
+          <span class="meme-emoji" id="celebrate-emoji"></span>
+          <span id="celebrate-caption"></span>
+        </div>
+      </div>
     </div>
+
+    <div class="section-label">Sequence</div>
     <div class="sequence-wrap">
       <div class="sequence-row" id="sequence-row"></div>
     </div>
 
-    <!-- Color legend -->
-    <div class="section-label" style="margin-top:2.5rem">Color Legend</div>
+    <div class="section-label" id="legend-label">Color Legend</div>
     <div class="legend" id="color-legend"></div>
   </div>
-</div>
+</main>
 
 <script>
-  const ARC_COLORS = [
-    "#000000", // 0 black
-    "#0074D9", // 1 blue
-    "#FF4136", // 2 red
-    "#2ECC40", // 3 green
-    "#FFDC00", // 4 yellow
-    "#AAAAAA", // 5 gray
-    "#F012BE", // 6 magenta
-    "#FF851B", // 7 orange
-    "#ADD8E6", // 8 light blue
-    "#870C25", // 9 maroon
-  ];
-  const ARC_NAMES = ["black","blue","red","green","yellow","gray","magenta","orange","lt blue","maroon"];
-  const DARK_IDX  = new Set([0,1,2,6,9]); // indices with dark bg → white text
-  const CELL      = 28;
+// ── ARC palette ──
+const ARC_COLORS = ["#000000","#0074D9","#FF4136","#2ECC40","#FFDC00","#AAAAAA","#F012BE","#FF851B","#ADD8E6","#870C25"];
+const ARC_NAMES  = ["black","blue","red","green","yellow","gray","magenta","orange","lt blue","maroon"];
+const DARK_IDX   = new Set([0,1,2,6,9]);
 
-  let puzzleData    = null;
-  let answersShown  = false;
-
-  // ── Grid rendering ──────────────────────────────────────────────
-  function renderGrid(grid) {
-    const table = document.createElement("table");
-    table.className = "grid-table";
-    for (const row of grid) {
-      const tr = document.createElement("tr");
-      for (const val of row) {
-        const idx = Math.max(0, Math.min(9, val));
-        const td  = document.createElement("td");
-        td.style.background = ARC_COLORS[idx];
-        td.style.color       = DARK_IDX.has(idx) ? "#fff" : "#000";
-        td.textContent       = val;
-        tr.appendChild(td);
-      }
-      table.appendChild(tr);
-    }
-    return table;
+// ── Puzzles read from code/narc_puzzles/ and embedded so this tool runs fully offline ──
+const EMBEDDED_PUZZLES = {
+  stump: {
+    schema: "narc-export-v1", puzzle_id: "narc_237", title: "STUMP", creator: "human", difficulty: "",
+    narrative: "Sam, Nate, and Cash were fiending for a game of Stump. The three of them gently hammered their nails into the stump. Cash went first--he successfully spun the hammer with one hand--but he missed Nate's nail and chipped the wood. Sam went second; he expertly spun the hammer, and he cleanly hit Cash's nail further into the stump. Nate missed his hammer and didn't hit anything. \n\nOn their second go-around, Cash caught the hammer but he hit Nate's nail on the side, left it all bent up and crazy, and he chipped the stump again. Sam, cool as a cucumber, hit Cash's nail cleanly into the stump. Cash is out. Nate, finally, caught his hammer and hit Sam's nail. \n\nOn the final round, Sam followed routine, but he hit Nate's nail off the stump! Per their rules, he is disqualified! Nate, for good measure, threw his hammer into the air, caught it, and expertly hammered Sam's nail in. Nate is the winner!",
+    masked_positions: [3],
+    sequence: [
+      { position: 0, label: "", masked: false, rows: 10, cols: 15, grid: [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,4,4,4,0,0,4,4,4,0,0,4,4,4,0],
+        [0,0,4,0,0,0,0,4,0,0,0,0,4,0,0],
+        [0,0,4,0,0,0,0,4,0,0,0,0,4,0,0],
+        [0,0,4,0,0,0,0,4,0,0,0,0,4,0,0],
+        [0,0,4,0,0,0,0,4,0,0,0,0,4,0,0],
+        [0,0,4,0,0,0,0,4,0,0,0,0,4,0,0],
+        [0,7,4,7,7,7,7,4,7,7,7,7,4,7,0],
+        [0,7,7,7,7,7,7,7,7,7,7,7,7,7,0]
+      ]},
+      { position: 1, label: "", masked: false, rows: 10, cols: 15, grid: [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,4,4,4,0,0,4,4,4,0,0,0,0,0,0],
+        [0,0,4,0,0,0,0,4,0,0,0,0,0,0,0],
+        [0,0,4,0,0,0,0,4,0,0,0,0,0,0,0],
+        [7,0,4,0,0,0,0,4,0,0,0,0,0,0,0],
+        [0,0,4,0,0,0,0,4,0,0,0,4,4,4,0],
+        [0,0,4,0,0,0,0,4,0,0,0,0,4,0,0],
+        [0,7,4,0,7,7,7,4,7,7,7,7,4,7,0],
+        [0,7,7,7,7,7,7,7,7,7,7,7,4,7,0]
+      ]},
+      { position: 2, label: "", masked: false, rows: 10, cols: 15, grid: [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [4,4,4,4,0,0,0,0,0,0,0,0,0,0,0],
+        [4,0,0,4,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,4,0,0,4,4,4,0,0,0,0,0,0],
+        [0,0,4,4,0,0,0,4,0,0,0,0,0,0,0],
+        [0,0,4,0,0,0,0,4,0,0,0,0,0,0,0],
+        [0,0,7,0,7,7,7,4,7,7,7,4,4,4,0],
+        [0,7,7,7,7,7,7,4,7,7,7,7,4,7,0]
+      ]},
+      { position: 3, label: "", masked: true, rows: 10, cols: 15, grid: null }
+    ],
+    answer_grids: { "3": [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,7,0,7,4,4,4,7,7,7,4,4,4,0],
+      [0,7,7,7,7,7,4,7,7,7,7,7,4,7,0]
+    ]}
+  },
+  tortoise: {
+    schema: "narc-export-v1", puzzle_id: "narc_032324", title: "The Ghost of the Tortoise", creator: "human", difficulty: "hard",
+    narrative: "The same driver is back. He is stranded in the desert, after he had brutally and inhumanely murdered a tortoise. The toroise is back for revenge. In ghost form!",
+    masked_positions: [3],
+    sequence: [
+      { position: 0, label: "", masked: false, rows: 5, cols: 5, grid: [
+        [8,8,4,4,8],[8,8,4,4,8],[8,8,8,8,8],[8,2,8,8,5],[0,0,0,0,0]
+      ]},
+      { position: 1, label: "", masked: false, rows: 5, cols: 5, grid: [
+        [8,8,4,4,8],[8,8,4,4,8],[8,8,8,8,8],[8,2,8,5,8],[0,0,0,0,0]
+      ]},
+      { position: 2, label: "", masked: false, rows: 5, cols: 5, grid: [
+        [8,8,4,4,8],[8,8,4,4,8],[8,8,8,8,8],[8,2,5,8,8],[0,0,0,0,0]
+      ]},
+      { position: 3, label: "", masked: true, rows: 5, cols: 5, grid: null }
+    ],
+    answer_grids: { "3": [
+      [8,8,4,4,8],[8,8,4,4,8],[8,8,8,8,8],[8,5,8,8,8],[0,0,0,0,0]
+    ]}
+  },
+  lunch: {
+    schema: "narc-export-v1", puzzle_id: "sub_005", title: "Lunch", creator: "human", difficulty: "",
+    narrative: "Four friends get lunch together every day. They go to a ramen place downtown and have particularities about their order. Terb gets the same thing every day, ramen with green onions on top. Niloc gets the same thing every day, ramen with hot sauce across the noodles. On Wednesday, Terb and Niloc treat themselves to extra green onions and extra hot sauce. Nosaj gets creative. Starting on Monday, he gets green onions with a little hot sauce. Tuesday, he gets a portion of dark meat with no other toppings. Like Terb and Niloc on Wednesday, Nosaj goes all out with half meat and a little green onions with hot sauce. Eolhc keeps it simple with plain ramen every day. On Thursday, everyone returns to their normal Monday order.",
+    masked_positions: [3],
+    sequence: [
+      { position: 0, label: "Mon.", masked: false, rows: 5, cols: 5, grid: [
+        [3,3,0,4,2],[4,4,0,2,4],[0,0,0,0,0],[3,3,0,4,4],[2,4,0,4,4]
+      ]},
+      { position: 1, label: "Tues.", masked: false, rows: 5, cols: 5, grid: [
+        [3,3,0,4,2],[4,4,0,2,4],[0,0,0,0,0],[9,4,0,4,4],[9,4,0,4,4]
+      ]},
+      { position: 2, label: "Wed.", masked: false, rows: 5, cols: 5, grid: [
+        [3,3,0,2,2],[3,3,0,2,2],[0,0,0,0,0],[9,3,0,4,4],[9,2,0,4,4]
+      ]},
+      { position: 3, label: "Thurs.", masked: true, rows: 5, cols: 5, grid: null }
+    ],
+    answer_grids: { "3": [
+      [3,3,0,4,2],[4,4,0,2,4],[0,0,0,0,0],[3,3,0,4,4],[2,4,0,4,4]
+    ]}
   }
+};
 
-  function renderMasked(rows, cols) {
-    const div = document.createElement("div");
-    div.className = "masked-placeholder";
-    div.style.width  = (cols * CELL + 2) + "px";
-    div.style.height = (rows * CELL + 2) + "px";
-    const q = document.createElement("span");
-    q.className = "masked-q";
-    q.textContent = "?";
-    div.appendChild(q);
-    return div;
-  }
+// ── Persisted state ──
+const STORE_KEY = "narc-visualizer-v1";
+const state = {
+  puzzleKey: "stump",
+  cellSize: 32,
+  showNumbers: true,
+  showGrid: true,
+  showLegend: true,
+  memesEnabled: true,
+  customJson: "",
+};
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) Object.assign(state, JSON.parse(raw));
+  } catch (e) {}
+}
 
-  // ── Build puzzle view ────────────────────────────────────────────
-  function renderPuzzle(data) {
-    puzzleData   = data;
-    answersShown = false;
+let puzzleData = null;   // normalized: {title,narrative,sequence,maskedSet,answerGrids,puzzle_id,creator,difficulty}
+let answersShown = false;
 
-    // Header
-    document.getElementById("ph-title").textContent   = data.title || "(no title)";
-    document.getElementById("ph-id").textContent      = data.puzzle_id || "—";
-    document.getElementById("ph-creator").textContent = data.creator   || "—";
-    const diff = data.difficulty || data.human_difficulty || data.ai_difficulty;
-    if (diff) {
-      document.getElementById("ph-diff").textContent = diff;
-      document.getElementById("ph-diff-pill").style.display = "";
-    } else {
-      document.getElementById("ph-diff-pill").style.display = "none";
+// ── Normalize a raw NARC json blob into the shape the renderer wants ──
+function normalizePuzzle(data) {
+  if (!Array.isArray(data.sequence)) throw new Error('Not a valid NARC puzzle — missing a "sequence" array.');
+  const maskedSet = new Set((data.masked_positions || []).map(Number));
+  return {
+    title: data.title || "(no title)",
+    narrative: data.narrative || (Array.isArray(data.variants) && data.variants[0] && data.variants[0].narrative) || "(no narrative)",
+    puzzle_id: data.puzzle_id || "—",
+    creator: data.creator || "—",
+    difficulty: data.difficulty || data.human_difficulty || data.ai_difficulty || "",
+    sequence: data.sequence,
+    maskedSet,
+    answerGrids: data.answer_grids || {},
+  };
+}
+
+function normalizeCell(v) {
+  const n = parseInt(String(v), 10);
+  return isNaN(n) ? 0 : Math.max(0, Math.min(9, n));
+}
+
+// ── Grid rendering ──
+function renderGridTable(grid) {
+  const cs = state.cellSize;
+  const table = document.createElement("table");
+  table.className = "grid-table";
+  for (const row of grid) {
+    const tr = document.createElement("tr");
+    for (const val of row) {
+      const idx = normalizeCell(val);
+      const td = document.createElement("td");
+      td.style.width = cs + "px";
+      td.style.height = cs + "px";
+      td.style.fontSize = Math.max(8, Math.round(cs * 0.34)) + "px";
+      td.style.border = state.showGrid ? "1px solid var(--border)" : "1px solid transparent";
+      td.style.background = ARC_COLORS[idx];
+      td.style.color = DARK_IDX.has(idx) ? "#fff" : "#000";
+      if (state.showNumbers) td.textContent = String(idx);
+      tr.appendChild(td);
     }
+    table.appendChild(tr);
+  }
+  return table;
+}
 
-    // Narrative
-    document.getElementById("narrative-text").textContent = data.narrative || "(no narrative)";
+function renderMasked(rows, cols) {
+  const cs = state.cellSize;
+  const div = document.createElement("div");
+  div.className = "masked-placeholder";
+  div.style.width = (cols * cs) + "px";
+  div.style.height = (rows * cs) + "px";
+  const q = document.createElement("span");
+  q.className = "masked-q";
+  q.textContent = "?";
+  div.appendChild(q);
+  return div;
+}
 
-    // Masked count
-    const maskedPositions = data.masked_positions || [];
-    document.getElementById("masked-count").textContent =
-      maskedPositions.length
-        ? `${maskedPositions.length} masked frame${maskedPositions.length > 1 ? "s" : ""}`
-        : "No masked frames";
+// ── Full puzzle render ──
+function renderPuzzle() {
+  if (!puzzleData) return;
 
-    // Show/hide reveal button
-    document.getElementById("reveal-btn").style.display =
-      maskedPositions.length ? "" : "none";
-    document.getElementById("reveal-btn").textContent = "Reveal Answers";
+  document.getElementById("ph-title").textContent = puzzleData.title;
+  const bits = [`ID: ${puzzleData.puzzle_id}`, `Creator: ${puzzleData.creator}`];
+  if (puzzleData.difficulty) bits.push(`Difficulty: ${puzzleData.difficulty}`);
+  document.getElementById("ph-sub").textContent = bits.join("  ·  ");
+  document.getElementById("narrative-text").textContent = puzzleData.narrative;
 
-    // Sequence
-    const row = document.getElementById("sequence-row");
-    row.innerHTML = "";
-    for (const frame of (data.sequence || [])) {
-      const card = document.createElement("div");
-      card.className = "frame-card" + (frame.masked ? " is-masked" : "");
+  const maskedCount = puzzleData.maskedSet.size;
+  document.getElementById("masked-count").textContent =
+    maskedCount ? `${maskedCount} masked frame${maskedCount > 1 ? "s" : ""}` : "No masked frames";
+  document.getElementById("reveal-btn").style.display = maskedCount ? "" : "none";
+  document.getElementById("reveal-btn").textContent = answersShown ? "Hide Answers" : "Reveal Answers";
 
-      const lbl = document.createElement("div");
-      lbl.className = "frame-label" + (frame.masked ? " masked-label" : "");
-      lbl.textContent = frame.label || `#${frame.position}`;
-      card.appendChild(lbl);
+  const row = document.getElementById("sequence-row");
+  row.innerHTML = "";
+  const seq = puzzleData.sequence.slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  for (const frame of seq) {
+    const pos = frame.position;
+    const isMasked = puzzleData.maskedSet.has(Number(pos)) || !!frame.masked;
+    const card = document.createElement("div");
+    card.className = "frame-card" + (isMasked ? " is-masked" : "");
 
-      const gridWrap = document.createElement("div");
-      gridWrap.dataset.position = frame.position;
+    const lbl = document.createElement("div");
+    lbl.className = "frame-label" + (isMasked ? " masked-label" : "");
+    lbl.textContent = (frame.label || `#${pos}`) + (isMasked ? " (?)" : "");
+    card.appendChild(lbl);
 
-      if (frame.masked || frame.grid === null) {
-        const rows = frame.rows || 5;
-        const cols = frame.cols || 5;
-        gridWrap.appendChild(renderMasked(rows, cols));
+    const wrap = document.createElement("div");
+    wrap.dataset.position = pos;
+    if (isMasked) {
+      if (answersShown && puzzleData.answerGrids[String(pos)]) {
+        wrap.appendChild(renderGridTable(puzzleData.answerGrids[String(pos)]));
       } else {
-        gridWrap.appendChild(renderGrid(frame.grid));
+        wrap.appendChild(renderMasked(frame.rows || 5, frame.cols || 5));
       }
-
-      card.appendChild(gridWrap);
-      row.appendChild(card);
+    } else if (frame.grid) {
+      wrap.appendChild(renderGridTable(frame.grid));
+    } else {
+      wrap.appendChild(renderMasked(frame.rows || 5, frame.cols || 5));
     }
+    card.appendChild(wrap);
+    row.appendChild(card);
+  }
 
-    // Color legend
-    const legend = document.getElementById("color-legend");
-    legend.innerHTML = "";
+  document.getElementById("legend-label").style.display = state.showLegend ? "" : "none";
+  const legend = document.getElementById("color-legend");
+  legend.style.display = state.showLegend ? "" : "none";
+  legend.innerHTML = "";
+  if (state.showLegend) {
     for (let i = 0; i < 10; i++) {
       const item = document.createElement("div");
       item.className = "legend-item";
-      const swatch = document.createElement("div");
-      swatch.className = "legend-swatch";
-      swatch.style.background = ARC_COLORS[i];
-      item.appendChild(swatch);
+      const sw = document.createElement("div");
+      sw.className = "legend-swatch";
+      sw.style.background = ARC_COLORS[i];
+      item.appendChild(sw);
       item.appendChild(document.createTextNode(`${i} ${ARC_NAMES[i]}`));
       legend.appendChild(item);
     }
-
-    // Switch screens
-    document.getElementById("input-screen").style.display  = "none";
-    document.getElementById("puzzle-screen").style.display = "";
   }
+}
 
-  // ── Answer toggle ────────────────────────────────────────────────
-  function toggleAnswers() {
-    if (!puzzleData) return;
-    answersShown = !answersShown;
-    document.getElementById("reveal-btn").textContent =
-      answersShown ? "Hide Answers" : "Reveal Answers";
+function toggleAnswers() {
+  if (!puzzleData || !puzzleData.maskedSet.size) return;
+  answersShown = !answersShown;
+  renderPuzzle();
+  if (answersShown) loadCelebrationGif();
+  else hideCelebrationGif();
+}
 
-    const answerGrids = puzzleData.answer_grids || {};
-    const maskedPositions = new Set(puzzleData.masked_positions || []);
+// ── Loading puzzles ──
+function showError(msg) {
+  const e = document.getElementById("error-msg");
+  e.style.display = "block";
+  e.textContent = msg;
+}
+function clearError() { document.getElementById("error-msg").style.display = "none"; }
 
-    for (const frame of (puzzleData.sequence || [])) {
-      if (!maskedPositions.has(frame.position)) continue;
-      const wrap = document.querySelector(`[data-position="${frame.position}"]`);
-      if (!wrap) continue;
+function loadEmbedded(key) {
+  clearError();
+  puzzleData = normalizePuzzle(EMBEDDED_PUZZLES[key]);
+  answersShown = false;
+  hideCelebrationGif();
+  renderPuzzle();
+}
 
-      wrap.innerHTML = "";
-      if (answersShown) {
-        const ansGrid = answerGrids[String(frame.position)];
-        if (ansGrid) {
-          wrap.appendChild(renderGrid(ansGrid));
-        } else {
-          const msg = document.createElement("div");
-          msg.style.cssText = "color:#8b949e;font-size:0.75rem;padding:8px";
-          msg.textContent = "(no answer)";
-          wrap.appendChild(msg);
-        }
-      } else {
-        const rows = frame.rows || (puzzleData.sequence[0]?.rows || 5);
-        const cols = frame.cols || (puzzleData.sequence[0]?.cols || 5);
-        wrap.appendChild(renderMasked(rows, cols));
-      }
-    }
-  }
-
-  // ── Load helpers ─────────────────────────────────────────────────
-  function loadJSON(text) {
-    document.getElementById("error-msg").textContent = "";
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      document.getElementById("error-msg").textContent = "Invalid JSON: " + e.message;
-      return;
-    }
-    if (!data.sequence) {
-      document.getElementById("error-msg").textContent =
-        'Not a valid NARC puzzle — missing "sequence" field.';
-      return;
-    }
-    renderPuzzle(data);
-  }
-
-  function loadFromTextarea() {
-    const txt = document.getElementById("json-input").value.trim();
-    if (!txt) {
-      document.getElementById("error-msg").textContent = "Please paste a NARC JSON first.";
-      return;
-    }
-    loadJSON(txt);
-  }
-
-  function resetToInput() {
-    document.getElementById("puzzle-screen").style.display = "none";
-    document.getElementById("input-screen").style.display  = "";
-    document.getElementById("json-input").value = "";
-    document.getElementById("error-msg").textContent = "";
-    puzzleData = null;
+function loadCustomJSON(text) {
+  clearError();
+  let data;
+  try { data = JSON.parse(text); }
+  catch (e) { showError("Invalid JSON: " + e.message); return; }
+  try {
+    puzzleData = normalizePuzzle(data);
     answersShown = false;
+    hideCelebrationGif();
+    renderPuzzle();
+  } catch (e) { showError(e.message); }
+}
+
+function setPuzzlePicker(key) {
+  state.puzzleKey = key; save();
+  document.getElementById("custom-panel").style.display = key === "custom" ? "" : "none";
+  if (key === "custom") {
+    if (state.customJson) {
+      document.getElementById("json-input").value = state.customJson;
+      loadCustomJSON(state.customJson);
+    } else {
+      clearError();
+      puzzleData = null;
+      document.getElementById("sequence-row").innerHTML = "";
+      document.getElementById("ph-title").textContent = "";
+      document.getElementById("ph-sub").textContent = "";
+      document.getElementById("narrative-text").textContent = "Paste or upload a puzzle above to get started.";
+      document.getElementById("reveal-btn").style.display = "none";
+      document.getElementById("masked-count").textContent = "";
+    }
+  } else {
+    loadEmbedded(key);
   }
+}
 
-  // ── Drag-and-drop ─────────────────────────────────────────────────
-  document.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    document.getElementById("json-input")?.classList.add("drag-over");
-  });
+// ── Meme banners — no network calls, no keys, just emoji + a punchy caption ──
+const MOOD_MEMES = [
+  { emoji: "🔨", caption: "clean spin, clean hit" },
+  { emoji: "🐢👻", caption: "the tortoise never forgets" },
+  { emoji: "🍜", caption: "same order energy" },
+  { emoji: "🤯", caption: "wait, what just happened" },
+  { emoji: "🌀", caption: "plot twist incoming" },
+  { emoji: "😬", caption: "this is fine" },
+  { emoji: "🕵️", caption: "detective mode: on" },
+  { emoji: "🧠", caption: "big brain puzzle time" },
+];
+const CELEBRATE_MEMES = [
+  { emoji: "🎉", caption: "nailed it" },
+  { emoji: "🥁", caption: "ta-da!" },
+  { emoji: "💃", caption: "victory dance" },
+  { emoji: "🙌", caption: "hell yeah" },
+  { emoji: "🏆", caption: "Nice!" },
+];
 
-  document.addEventListener("dragleave", () => {
-    document.getElementById("json-input")?.classList.remove("drag-over");
-  });
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-  document.addEventListener("drop", (e) => {
-    e.preventDefault();
-    document.getElementById("json-input")?.classList.remove("drag-over");
-    const file = e.dataTransfer?.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => loadJSON(ev.target.result);
-    reader.readAsText(file);
-  });
+function loadMoodGif() {
+  const wrap = document.getElementById("mood-wrap");
+  if (!state.memesEnabled) { wrap.style.display = "none"; return; }
+  const m = pick(MOOD_MEMES);
+  document.getElementById("mood-emoji").textContent = m.emoji;
+  document.getElementById("mood-caption").textContent = m.caption;
+  wrap.style.display = "flex";
+}
+function loadCelebrationGif() {
+  if (!state.memesEnabled) return;
+  const m = pick(CELEBRATE_MEMES);
+  document.getElementById("celebrate-emoji").textContent = m.emoji;
+  document.getElementById("celebrate-caption").textContent = m.caption;
+  document.getElementById("celebrate-card").classList.add("show");
+}
+function hideCelebrationGif() {
+  document.getElementById("celebrate-card").classList.remove("show");
+}
+function refreshGifVisibility() {
+  if (!state.memesEnabled) {
+    document.getElementById("mood-wrap").style.display = "none";
+    hideCelebrationGif();
+  } else {
+    loadMoodGif();
+  }
+}
 
-  // ── Enter key in textarea ─────────────────────────────────────────
-  document.getElementById("json-input").addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) loadFromTextarea();
-  });
+// ── Theme ──
+function applyTheme(t) {
+  if (t === "light") document.documentElement.dataset.theme = "light";
+  else delete document.documentElement.dataset.theme;
+  const moon = document.getElementById("icon-moon"), sun = document.getElementById("icon-sun");
+  moon.style.display = t === "light" ? "none" : "";
+  sun.style.display = t === "light" ? "" : "none";
+  try { localStorage.setItem("narc-visualizer-theme", t); } catch (e) {}
+}
+document.getElementById("theme-toggle").onclick = () => {
+  const current = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  applyTheme(current === "light" ? "dark" : "light");
+};
+
+// ── Wire up controls ──
+document.getElementById("puzzle-picker").onchange = e => setPuzzlePicker(e.target.value);
+document.getElementById("reveal-btn").onclick = toggleAnswers;
+document.getElementById("mood-reroll").onclick = loadMoodGif;
+
+document.getElementById("load-custom-btn").onclick = () => {
+  const txt = document.getElementById("json-input").value.trim();
+  if (!txt) { showError("Paste a NARC JSON first."); return; }
+  state.customJson = txt; save();
+  loadCustomJSON(txt);
+};
+document.getElementById("upload-btn").onclick = () => document.getElementById("json-file").click();
+document.getElementById("json-file").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    document.getElementById("json-input").value = rd.result;
+    state.customJson = rd.result; save();
+    loadCustomJSON(rd.result);
+  };
+  rd.readAsText(f);
+};
+document.addEventListener("dragover", e => {
+  if (state.puzzleKey !== "custom") return;
+  e.preventDefault();
+  document.getElementById("custom-panel").classList.add("drag-over");
+});
+document.addEventListener("dragleave", () => document.getElementById("custom-panel").classList.remove("drag-over"));
+document.addEventListener("drop", e => {
+  if (state.puzzleKey !== "custom") return;
+  e.preventDefault();
+  document.getElementById("custom-panel").classList.remove("drag-over");
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (!file) return;
+  const rd = new FileReader();
+  rd.onload = ev => {
+    document.getElementById("json-input").value = ev.target.result;
+    state.customJson = ev.target.result; save();
+    loadCustomJSON(ev.target.result);
+  };
+  rd.readAsText(file);
+});
+
+function bindToggle(id, key) {
+  document.getElementById(id).onchange = e => {
+    state[key] = e.target.checked; save();
+    renderPuzzle();
+  };
+}
+bindToggle("show-numbers", "showNumbers");
+bindToggle("show-grid", "showGrid");
+bindToggle("show-legend", "showLegend");
+document.getElementById("memes-enabled").onchange = e => {
+  state.memesEnabled = e.target.checked; save();
+  refreshGifVisibility();
+};
+document.getElementById("cell-size").oninput = e => {
+  state.cellSize = +e.target.value; save();
+  document.getElementById("cell-size-v").textContent = e.target.value + "px";
+  renderPuzzle();
+};
+
+// ── Init ──
+load();
+applyTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
+document.getElementById("puzzle-picker").value = state.puzzleKey;
+document.getElementById("cell-size").value = state.cellSize;
+document.getElementById("cell-size-v").textContent = state.cellSize + "px";
+document.getElementById("show-numbers").checked = state.showNumbers;
+document.getElementById("show-grid").checked = state.showGrid;
+document.getElementById("show-legend").checked = state.showLegend;
+document.getElementById("memes-enabled").checked = state.memesEnabled;
+setPuzzlePicker(state.puzzleKey);
+if (state.memesEnabled) loadMoodGif();
 </script>
 </body>
 </html>
